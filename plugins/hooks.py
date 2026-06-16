@@ -57,6 +57,29 @@ def discover_and_load(plugin_dir=None):
         name = fn[:-3]
         load(name)
 
+    # Auto-discover memory integration modules (gitignored, safe from git pull)
+    memory_dir = os.path.join(_PROJECT_ROOT, 'memory')
+    if os.path.isdir(memory_dir):
+        for fn in sorted(os.listdir(memory_dir)):
+            if not fn.endswith('_integration.py'):
+                continue
+            mod_path = os.path.join(memory_dir, fn)
+            mod_name = fn[:-3]
+            # Guard: skip if already loaded (prevents circular re-import via agentmain)
+            if mod_name in sys.modules:
+                sys.stderr.write(f"[hooks] SKIP (already loaded): {fn}\n")
+                continue
+            spec = importlib.util.spec_from_file_location(mod_name, mod_path)
+            if spec and spec.loader:
+                try:
+                    mod = importlib.util.module_from_spec(spec)
+                    sys.modules[mod_name] = mod  # register BEFORE exec_module to break circular re-import
+                    spec.loader.exec_module(mod)
+                    sys.stderr.write(f"[hooks] Loaded memory integration: {fn}\n")
+                except Exception as e:
+                    sys.modules.pop(mod_name, None)  # clean up on failure
+                    sys.stderr.write(f"[hooks] memory integration '{fn}' load failed: {e}\n")
+
 
 def load(name):
     try:
