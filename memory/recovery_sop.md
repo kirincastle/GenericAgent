@@ -112,9 +112,65 @@ tar czf ~/ga_backup_$(date +%Y%m%d).tar.gz \
 # 推送到安全位置（加密云盘/密码管理器）
 ```
 
-## 恢复后首次对话建议
-新机器上第一次运行 GA 时，对 AI 说：
-> "我刚换了新电脑，这是 git clone 的全新环境。检查所有记忆文件是否完整，确认 mykey.py 是否正确，然后告诉我缺少什么。"
+## 多机同步工作流 — 保持会话一致 + GA 最新
+
+### 核心原则
+- **代码 + 记忆（L1/L2/L3）** → git sync（自动）
+- **会话文件（model_responses/*.txt）** → 可选同步（见下方选项）
+- **秘密文件（mykey.py, ~/.ssh/）** → 每台机独立放置，不同步
+
+### 推荐工作流（必须）
+```bash
+# 机器 A — 开始工作前
+./ga_sync.sh pull
+
+# 机器 A — 工作完成后
+# 先跑 /neat（把学到的东西写入记忆）
+./ga_sync.sh push
+
+# 机器 B — 换机器时
+./ga_sync.sh pull   # 拿到机器 A 的最新代码 + 记忆
+```
+
+### 会话同步（可选）
+若你想在机器 B 继续机器 A 未完成的对话（会话连续性），需要同步 `temp/model_responses/`。
+
+**选项 A: 不同步（推荐）**
+- 每台机器有自己独立的会话
+- 知识通过 neat-freak → L2 记忆蒸馏，跨机共享
+- 优点：简单，无冲突
+
+**选项 B: rsync 到 jpkbb（中心服务器）**
+```bash
+# 机器 A 推送会话
+rsync -az temp/model_responses/ root@100.127.66.71:/opt/ga-sessions/
+
+# 机器 B 拉取会话
+rsync -az root@100.127.66.71:/opt/ga-sessions/ temp/model_responses/
+```
+
+**选项 C: 云盘同步**
+```bash
+# 将 temp/ 软链到云盘同步目录
+ln -sf ~/Dropbox/ga-sessions/ temp/model_responses
+# 或
+ln -sf ~/GoogleDrive/ga-sessions/ temp/model_responses
+```
+
+### 保持 GA 最新
+```bash
+# 随时检查同步状态
+./ga_sync.sh status
+
+# 懒人一键同步（pull + 检查 → 可选 push）
+./ga_sync.sh auto
+```
+
+### 推荐习惯
+1. **每天结束前**：跑 `/neat` → `./ga_sync.sh push`
+2. **每天开始时**：`./ga_sync.sh pull`
+3. **每周一次**：`./ga_sync.sh auto`
+4. **遇到冲突**：`git pull --rebase` 后重试 push
 
 ## 变更历史
 - **2026-06-18**: 创建。`memory/global_mem.txt` 等关键记忆文件加入 git 跟踪。
