@@ -168,3 +168,46 @@
 - **admin embed**: adminHTML 从 `const adminHTML = \`...\`` 字符串提取为 admin/index.html，通过 `//go:embed` 加载
 - **编译验证**: `go build ./...` + `go vet ./...` 均通过
 - **部署**: v3.027 → v3.028，`bash build.sh deploy 8000` 一键成功
+
+## codegraph取代graphify (2026-06-18)
+- **决策**: 禁用 graphify，只用 codegraph（FTS5全文搜索 + 调用链追踪，无需隔夜索引）
+- **动作**: 
+  - `ga.py` 修好 tool 路径（mccg/2go-mccg 指向 ssh/ping）
+  - 删除 mccg/2go-mccg 的 graphify-out
+  - agent 工具集从 graphify 迁移到 codegraph_query/codegraph_node/codegraph_callers/codegraph_callees/codegraph_impact
+- **效果**: codegraph 更快更准，graphify 停用不再维护
+
+## Hive Master 完成 migration-dashboard 移植 (2026-06-18)
+- **任务**: 将 mccg 的 5 个特性移植到 migration-dashboard
+- **工具**: `agentmain.py --reflect reflect/goal_mode.py` + Hive Master 架构（BBS + Master + Workers）
+- **产出**: 14 commits（7 master + 4 worker + 其他），含 ssh.go/backup.go/customcli.go/customcli_stream.go/customcli_sessions.go/models.go/web/server.go
+- **耗时**: ~2h，第 18 轮验证完成
+- **状态**: 所有 5 个 Issue 完成，Master 进入 idle loop（budget_seconds 设 24h，仍在空转）
+
+## oc2api 上游 worker.js 架构 (2026-06-18)
+- **位置**: `/home/moclaw/projects/edge_tunnel/worker.js`（Cloudflare Worker）
+- **数据流**:
+  - worker.js KV 存储 `config.json`（HOSTS/UUID/优选IP 等）
+  - `/sub` 端点实时读 KV 生成订阅（vless/trojan/ss 节点）
+  - `POST admin/config.json` → 更新 KV config
+  - `POST admin/ADD.txt` → 上传自定义 IP 列表
+- **订阅刷新**: 纯 request-driven，**无定时器**。每个 `/sub` 请求都实时从 KV 生成
+  - `SUBUpdateTime: 3`（line 4937）只是 Clash 的 `Profile-Update-Interval` header，非 worker 自身刷新
+- **xray 侧**: oc2api 通过 `rotateXrayProxy()` 触发 xray 容器旋转
+  1. `sync-sub.py` → GET /sub → 拉新订阅
+  2. `syncSocks5FromXrayConfig()` → 读取 xray config 的 inbound SOCKS5 端口
+  3. `docker exec xray-proxy kill -1 1` → SIGHUP 重载
+- **缺失环节**: rotate 前未调 worker admin 接口改 config → sync-sub.py 拉到的是旧节点
+
+## oc2api 手动节点更新方案分析 (2026-06-18)
+- **需求**: oc2api 手动 trigger → 改 worker config → 新订阅 → 新 SOCKS5 → oc2api 接手
+- **所需步骤**: 
+  1. oc2api → POST admin/config.json → worker KV 更新
+  2. sync-sub.py → 拉到新节点
+  3. xray 重载 → 放出新 SOCKS5 端口
+  4. syncSocks5FromXrayConfig() → oc2api 切到新代理
+- **状态**: 待实现（先别code）
+
+## neat-freak SOP 补充 (2026-06-19)
+- `/neat` 完成后必须提供 handoff doc 的 full path
+- Handoff doc 路径: `/home/moclaw/projects/external/genericagent/docs/handoff.md`
