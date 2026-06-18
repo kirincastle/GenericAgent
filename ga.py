@@ -520,6 +520,80 @@ class GenericAgentHandler(BaseHandler):
         else: result = "Memory Management SOP not found. Do not update memory."
         return StepOutcome(result, next_prompt=prompt)
 
+    # ── CodeGraph tools (morphling from colbymchenry/codegraph) ──
+
+    def do_codegraph_query(self, args, response):
+        from memory.codegraph_tool import cg_query
+        project = os.path.dirname(os.path.abspath(__file__))
+        r = cg_query(project, args.get('query', ''))
+        if not r['ok']: return StepOutcome({'error': r['error']})
+        out = [f"**{n['name']}** ({n['kind']}) — {n['file_path']}:{n.get('start_line','?')}"
+               for n in r['nodes']]
+        return StepOutcome(f"Found {r['count']} symbols:\n" + "\n".join(out))
+
+    def do_codegraph_node(self, args, response):
+        from memory.codegraph_tool import cg_node
+        project = os.path.dirname(os.path.abspath(__file__))
+        r = cg_node(project, args.get('name', ''))
+        if not r['ok']: return StepOutcome({'error': r['error']})
+        if not r['nodes']: return StepOutcome("No matching symbol found.")
+        out = []
+        for n in r['nodes']:
+            out.append(f"## {n['name']} ({n['kind']})")
+            out.append(f"**Location:** {n['file_path']}:{n.get('start_line','?')}")
+            out.append(f"**Language:** {n.get('language','?')}")
+            if n.get('signature'): out.append(f"**Signature:** {n['signature']}")
+            if n.get('docstring'): out.append(f"**Docstring:** {n['docstring'][:500]}")
+            out.append(f"**Callers count:** {n.get('caller_count',0)}  |  **Callees count:** {n.get('callee_count',0)}")
+            out.append("")
+        return StepOutcome("\n".join(out))
+
+    def do_codegraph_callers(self, args, response):
+        from memory.codegraph_tool import cg_callers
+        project = os.path.dirname(os.path.abspath(__file__))
+        r = cg_callers(project, args.get('name', ''))
+        if not r['ok']: return StepOutcome({'error': r['error']})
+        if not r['edges']: return StepOutcome("No callers found.")
+        out = [f"**{e['source_name'] or e['source_id']}** → {e['target_name'] or e['target_id']}  ({e.get('file_path','')}:{e.get('line','?')})"
+               for e in r['edges']]
+        return StepOutcome(f"{r['count']} callers:\n" + "\n".join(out))
+
+    def do_codegraph_callees(self, args, response):
+        from memory.codegraph_tool import cg_callees
+        project = os.path.dirname(os.path.abspath(__file__))
+        r = cg_callees(project, args.get('name', ''))
+        if not r['ok']: return StepOutcome({'error': r['error']})
+        if not r['edges']: return StepOutcome("No callees found.")
+        out = [f"**{e['source_name'] or e['source_id']}** → {e['target_name'] or e['target_id']}  ({e.get('file_path','')}:{e.get('line','?')})"
+               for e in r['edges']]
+        return StepOutcome(f"{r['count']} callees:\n" + "\n".join(out))
+
+    def do_codegraph_impact(self, args, response):
+        from memory.codegraph_tool import cg_impact
+        project = os.path.dirname(os.path.abspath(__file__))
+        r = cg_impact(project, args.get('name', ''))
+        if not r['ok']: return StepOutcome({'error': r['error']})
+        out = []
+        if r.get('callers'):
+            out.append("### Upstream (callers):")
+            out.extend(f"  {c['source_name']} → {c['target_name']}  (depth={c.get('depth',0)})" for c in r['callers'])
+        if r.get('callees'):
+            out.append("### Downstream (callees):")
+            out.extend(f"  {c['source_name']} → {c['target_name']}  (depth={c.get('depth',0)})" for c in r['callees'])
+        if not out: return StepOutcome(f"Node '{args.get('name','')}' found but no connections traced.")
+        out.append(f"\nAffected files: {', '.join(r.get('files', []))}" if r.get('files') else "")
+        return StepOutcome("\n".join(out))
+
+    def do_codegraph_files(self, args, response):
+        from memory.codegraph_tool import cg_files
+        project = os.path.dirname(os.path.abspath(__file__))
+        r = cg_files(project, args.get('pattern', ''))
+        if not r['ok']: return StepOutcome({'error': r['error']})
+        if not r['files']: return StepOutcome("No files indexed.")
+        out = [f"**{f['path']}**  ({f.get('language','?')}, {f.get('node_count',0)} nodes)"
+               for f in r['files']]
+        return StepOutcome(f"{r['count']} files:\n" + "\n".join(out))
+
     def _fold_earlier(self, lines):
         FALLBACK = '直接回答了用户问题'
         parts, cnt, last = [], 0, ''

@@ -69,5 +69,41 @@
     "name": "start_long_term_update",
     "description": "Start distilling long-term memory. Call when discovering info worth remembering (env facts/user prefs/lessons learned). Skip if memory already updated or in autonomous flow. Must call when a task that took 15+ turns is completed",
     "parameters": {"type": "object", "properties": {}}}
-  }
+  },
+  {"type": "function", "function": {
+    "name": "codegraph_query",
+    "description": "FTS5 full-text search across code symbols (functions, classes, variables, files). Returns matching symbol name, kind, file path, line range, signature. Call this when you need to find code by name/keyword/concept.",
+    "parameters": {"type": "object", "properties": {
+      "query": {"type": "string", "description": "Search keyword or phrase"}}}
+  }},
+  {"type": "function", "function": {
+    "name": "codegraph_node",
+    "description": "Get detailed info about a specific symbol: source file location, signature, docstring, callers/callees count. Use after codegraph_query found a symbol of interest.",
+    "parameters": {"type": "object", "properties": {
+      "name": {"type": "string", "description": "Symbol name (function/class/variable)"}}}
+  }},
+  {"type": "function", "function": {
+    "name": "codegraph_callers",
+    "description": "Find all code locations that call/reference a given symbol. Returns caller name, file, line. Essential for understanding 'who depends on this' before refactoring.",
+    "parameters": {"type": "object", "properties": {
+      "name": {"type": "string", "description": "Symbol name to find callers of"}}}
+  }},
+  {"type": "function", "function": {
+    "name": "codegraph_callees",
+    "description": "Find all symbols called/referenced by a given symbol. Returns callee name, file, line. Essential for understanding 'what does this function/class touch'.",
+    "parameters": {"type": "object", "properties": {
+      "name": {"type": "string", "description": "Symbol name to find callees of"}}}
+  }},
+  {"type": "function", "function": {
+    "name": "codegraph_impact",
+    "description": "BFS-based impact analysis. Given a symbol, traces upstream (callers) and downstream (callees) up to 3 levels deep. Returns the full call chain and affected files. Use before refactoring to assess blast radius.",
+    "parameters": {"type": "object", "properties": {
+      "name": {"type": "string", "description": "Symbol name for impact analysis"}}}
+  }},
+  {"type": "function", "function": {
+    "name": "codegraph_files",
+    "description": "List indexed files in the project. Optional pattern filter (e.g. '.py' for Python files). Shows file path, language, node count.",
+    "parameters": {"type": "object", "properties": {
+      "pattern": {"type": "string", "description": "Optional filename pattern filter (LIKE match)"}}}
+  }}
 ]
