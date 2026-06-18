@@ -4567,6 +4567,17 @@ class GenericAgentTUI(App[None]):
         palette = self.query_one("#palette", OptionList)
         prefix = value.strip().lower()
         matches = [c for c in COMMANDS if c[0].startswith(prefix)]
+        # ── MattPocock skills autocomplete ──
+        try:
+            from memory.mattpocock_integration import _get_skills
+            known = {c[0] for c in matches}
+            for s in _get_skills():
+                cmd = f"/{s['name']}"
+                if cmd.startswith(prefix) and cmd not in known:
+                    matches.append((cmd, "", f"Skill: {s['description']}"))
+                    known.add(cmd)
+        except Exception:
+            pass
         palette.clear_options()
         if not matches:
             self._hide_palette()

@@ -31,6 +31,7 @@
 - **Fix**: Added `max_num_turns: 8` in config_loader.json5, .codex-config.json5, frontend-h5 template
 - **Mechanism**: Limits history window to 8 turns → stable prefix → cache hit recovers
 - **Files**: config_loader.json5, .codex-config.json5, frontend-h5 template
+- **2026-06-18 Fix**: `ga_cache.py after_request()` 字段映射修復 — DeepSeek/OpenAI 用 `prompt_tokens_details.cached_tokens` (cache_read)，Anthropic 用 `cache_read_input_tokens` / `cache_creation_input_tokens`。原来是 `cached_tokens` fallback 错误赋给 `ci`(creation) 而非 `cr`(read)，导致 GA Cache 统计显示 0% 命中而实际 Token usage 正常。
 
 ## Latest Neat-Freak Session (2026-06-17)
 - **Record**: `docs/handoff.md` — full session actions + unresolved items

@@ -147,7 +147,8 @@ def install() -> None:
                     if out > 1: t.output += out; t.last_output = out
                     t.last_input = inp + cc + cr
                 elif api_mode == 'chat_completions':
-                    cached = int((usage.get('prompt_tokens_details') or {}).get('cached_tokens', 0) or 0)
+                    cached = int((usage.get('prompt_tokens_details') or {}).get('cached_tokens', 0) or 0) or \
+                             int(usage.get('prompt_cache_hit_tokens', 0) or 0)
                     inp = int(usage.get('prompt_tokens', 0) or 0) - cached
                     t.input += inp; t.cache_read += cached
                     t.last_input = inp + cached

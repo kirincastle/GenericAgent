@@ -323,7 +323,8 @@ def _record_usage(usage, api_mode):
         print(f"[Cache] input={inp} cached={cached}")
         if out: print(f"[Output] tokens={out}")
     elif api_mode == 'chat_completions':
-        cached = (usage.get("prompt_tokens_details") or {}).get("cached_tokens", 0)
+        cached = (usage.get("prompt_tokens_details") or {}).get("cached_tokens", 0) or \
+                 usage.get('prompt_cache_hit_tokens', 0) or 0
         inp = usage.get("prompt_tokens", 0); out = usage.get("completion_tokens", 0)
         print(f"[Cache] input={inp} cached={cached}")
         if out: print(f"[Output] tokens={out}")
