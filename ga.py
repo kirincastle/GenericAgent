@@ -528,7 +528,7 @@ class GenericAgentHandler(BaseHandler):
         r = cg_query(project, args.get('query', ''))
         if not r['ok']: return StepOutcome({'error': r['error']})
         out = [f"**{n['name']}** ({n['kind']}) — {n['file_path']}:{n.get('start_line','?')}"
-               for n in r['nodes']]
+               for n in r['rows']]
         return StepOutcome(f"Found {r['count']} symbols:\n" + "\n".join(out))
 
     def do_codegraph_node(self, args, response):
@@ -536,16 +536,13 @@ class GenericAgentHandler(BaseHandler):
         project = os.path.dirname(os.path.abspath(__file__))
         r = cg_node(project, args.get('name', ''))
         if not r['ok']: return StepOutcome({'error': r['error']})
-        if not r['nodes']: return StepOutcome("No matching symbol found.")
-        out = []
-        for n in r['nodes']:
-            out.append(f"## {n['name']} ({n['kind']})")
-            out.append(f"**Location:** {n['file_path']}:{n.get('start_line','?')}")
-            out.append(f"**Language:** {n.get('language','?')}")
-            if n.get('signature'): out.append(f"**Signature:** {n['signature']}")
-            if n.get('docstring'): out.append(f"**Docstring:** {n['docstring'][:500]}")
-            out.append(f"**Callers count:** {n.get('caller_count',0)}  |  **Callees count:** {n.get('callee_count',0)}")
-            out.append("")
+        n = r['node']
+        out = [f"## {n['name']} ({n['kind']})"]
+        out.append(f"**Location:** {n['file_path']}:{n.get('start_line','?')}")
+        out.append(f"**Language:** {n.get('language','?')}")
+        if n.get('signature'): out.append(f"**Signature:** {n['signature']}")
+        if n.get('docstring'): out.append(f"**Docstring:** {n['docstring'][:500]}")
+        out.append(f"**Callers count:** {n.get('callers_count',0)}  |  **Callees count:** {n.get('callees_count',0)}")
         return StepOutcome("\n".join(out))
 
     def do_codegraph_callers(self, args, response):
@@ -553,9 +550,9 @@ class GenericAgentHandler(BaseHandler):
         project = os.path.dirname(os.path.abspath(__file__))
         r = cg_callers(project, args.get('name', ''))
         if not r['ok']: return StepOutcome({'error': r['error']})
-        if not r['edges']: return StepOutcome("No callers found.")
-        out = [f"**{e['source_name'] or e['source_id']}** → {e['target_name'] or e['target_id']}  ({e.get('file_path','')}:{e.get('line','?')})"
-               for e in r['edges']]
+        if not r['callers']: return StepOutcome("No callers found.")
+        out = [f"**{e['name']}** — {e['file_path']}:{e.get('start_line','?')}"
+               for e in r['callers']]
         return StepOutcome(f"{r['count']} callers:\n" + "\n".join(out))
 
     def do_codegraph_callees(self, args, response):
@@ -563,9 +560,9 @@ class GenericAgentHandler(BaseHandler):
         project = os.path.dirname(os.path.abspath(__file__))
         r = cg_callees(project, args.get('name', ''))
         if not r['ok']: return StepOutcome({'error': r['error']})
-        if not r['edges']: return StepOutcome("No callees found.")
-        out = [f"**{e['source_name'] or e['source_id']}** → {e['target_name'] or e['target_id']}  ({e.get('file_path','')}:{e.get('line','?')})"
-               for e in r['edges']]
+        if not r['callees']: return StepOutcome("No callees found.")
+        out = [f"**{e['name']}** — {e['file_path']}:{e.get('start_line','?')}"
+               for e in r['callees']]
         return StepOutcome(f"{r['count']} callees:\n" + "\n".join(out))
 
     def do_codegraph_impact(self, args, response):
@@ -574,14 +571,14 @@ class GenericAgentHandler(BaseHandler):
         r = cg_impact(project, args.get('name', ''))
         if not r['ok']: return StepOutcome({'error': r['error']})
         out = []
-        if r.get('callers'):
+        if r.get('callers_chain'):
             out.append("### Upstream (callers):")
-            out.extend(f"  {c['source_name']} → {c['target_name']}  (depth={c.get('depth',0)})" for c in r['callers'])
-        if r.get('callees'):
+            out.extend(f"  {c['name']} @ {c['file_path']}:{c.get('start_line','?')}" for c in r['callers_chain'])
+        if r.get('callees_chain'):
             out.append("### Downstream (callees):")
-            out.extend(f"  {c['source_name']} → {c['target_name']}  (depth={c.get('depth',0)})" for c in r['callees'])
+            out.extend(f"  {c['name']} @ {c['file_path']}:{c.get('start_line','?')}" for c in r['callees_chain'])
         if not out: return StepOutcome(f"Node '{args.get('name','')}' found but no connections traced.")
-        out.append(f"\nAffected files: {', '.join(r.get('files', []))}" if r.get('files') else "")
+        out.append(f"\nAffected files: {', '.join(r.get('affected_files', []))}" if r.get('affected_files') else "")
         return StepOutcome("\n".join(out))
 
     def do_codegraph_files(self, args, response):
