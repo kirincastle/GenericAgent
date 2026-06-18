@@ -105,6 +105,22 @@ tailscale up
 ping 100.127.66.71
 ```
 
+### 第八步：设置自动 commit+push（每 30 分）
+```bash
+# 每台机器只需设置一次
+crontab -e
+# 添加一行（更换路径为你的实际 repo 位置）：
+*/30 * * * * /home/moclaw/.local/bin/auto-commit.sh /path/to/genericagent --push
+```
+
+`auto-commit.sh` 脚本已在 git 外独立存在（`~/.local/bin/auto-commit.sh`），新机需要：
+1. 从旧机复制 or 从密码管理器/云盘获取这个脚本
+2. 放到 `~/.local/bin/auto-commit.sh`
+3. `chmod +x ~/.local/bin/auto-commit.sh`
+4. 添加 crontab 条目
+
+之后每 30 分钟自动 commit+push，无需手动操作。
+
 ### 第八步：重建模型缓存
 ```bash
 python model_registry.py --refresh

@@ -21,3 +21,4 @@ Mobile: adb_ui.py
 6. Windows: prefer win32gui title enumeration for GUI state
 7. Web JS: use native setter + event chain for input, check disabled before click, mind quote escaping; if scan empty/incomplete wait then rescan, no conclusions from first scan
 8. SOP: read SOPs not from memory, must use utils if available | complex long-running/user mentions planning -> read plan_sop
+9. Browser kill: Windows Chrome (galley) kill/restart must ask user first; Linux Chrome is free
