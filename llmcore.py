@@ -37,7 +37,7 @@ def __getattr__(name):  # once guard in PEP 562
     if name == 'mykeys': return reload_mykeys()[0]
     raise AttributeError(f"module 'llmcore' has no attribute {name}")
 
-def compress_history_tags(messages, keep_recent=10, max_len=800, force=False, interval=5):
+def compress_history_tags(messages, keep_recent=6, max_len=400, force=False, interval=5):
     """Compress <thinking>/<tool_use>/<tool_result> tags in older messages to save tokens."""
     compress_history_tags._cd = getattr(compress_history_tags, '_cd', 0) + 1
     if force: compress_history_tags._cd = 0
@@ -94,8 +94,21 @@ def safeprint(*argv):
     except OSError: pass
 print = safeprint
 
+def _slide_window_history(history, max_num_turns):
+    """滑动窗口：保留第一轮 + 最近 N-1 轮。max_num_turns≤0 不生效。"""
+    if max_num_turns <= 0 or len(history) < 2:
+        return
+    user_indices = [i for i, m in enumerate(history) if m['role'] == 'user']
+    if len(user_indices) <= max_num_turns:
+        return
+    # 保留第一轮，以及最后 max_num_turns-1 轮
+    keep = max_num_turns - 1
+    start = user_indices[-keep]
+    history[:] = history[:2] + history[start:]
+
 def trim_messages_history(history, sess):
-    cap = sess.context_win * 3
+    _slide_window_history(history, getattr(sess, 'max_num_turns', 0))
+    cap = sess.context_win * 2
     target = int(cap * getattr(sess, 'trim_keep_rate', 0.6))
     def cost(): return sum(len(json.dumps(m, ensure_ascii=False)) for m in history)
     compress_history_tags(history, interval=getattr(sess, 'cut_msg_interval', 5))
@@ -527,10 +540,24 @@ class BaseSession:
         self.api_key = cfg['apikey']
         self.api_base = cfg['apibase'].rstrip('/')
         self.model = cfg.get('model', '')
+        self.max_num_turns = cfg.get('max_num_turns', 0)
         default_context_win = 30000
         if 'deepseek' in self.model.lower():
-            default_context_win = 70000; self.cut_msg_interval = 25; self.trim_keep_rate = 0.3
+            default_context_win = 70000; self.cut_msg_interval = 3; self.trim_keep_rate = 0.3
         self.context_win = cfg.get('context_win', default_context_win)
+        # ── 自动从模型注册表校正 context_win ────────────────────────────────
+        try:
+            from model_registry import lookup_model, calc_context_win
+            spec = lookup_model(self.model)
+            if spec and spec['context']:
+                expected = calc_context_win(spec['context'])
+                old_val = self.context_win
+                if old_val != expected:
+                    self.context_win = expected
+                    print(f'[model_registry] {self.model}: context_win auto-corrected {old_val}→{expected} ({spec["context"]} tok ×4 ÷2)')
+        except Exception as e:
+            pass  # non-blocking
+        # ────────────────────────────────────────────────────────────────────
         self.history = []; self.lock = threading.Lock(); self.system = ""
         self.name = cfg.get('name', self.model)
         proxy = cfg.get('proxy'); 

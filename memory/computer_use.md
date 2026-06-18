@@ -1,5 +1,7 @@
 # computer_use
 
+> Human overview → `docs/computer-usage.md` | Agent SOP (below)
+
 相关L3 memory: **ui_detect.py** ljqCtrl.py ljqCtrl_sop.md
 
 ## 1. 基础规则

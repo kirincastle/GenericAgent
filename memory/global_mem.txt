@@ -123,6 +123,12 @@
 - **缓存**: `temp/model_registry_cache.json`，24h 过期
 
 ## jpkbb 服务器 timezone → HKT (2026-06-18)
+
+## 多机同步方案 (2026-06-18)
+- **代码+记忆**: 通过 git 跨机同步，`ga_sync.sh` 一键操作
+- **会话**: 每机独立，通过 neat-freak 蒸馏到 L2 共享，可选 rsync/云盘同步
+- **秘钥**: mykey.py + ~/.ssh/ 每机独立部署，git 不跟踪
+- **ga_sync.sh**: 支持 pull/push/status/auto 四模式
 - **原时区**: `America/New_York` (EDT, UTC-5)
 - **改后**: `Asia/Hong_Kong` (HKT, UTC+8)
 - **命令**: `timedatectl set-timezone Asia/Hong_Kong`

@@ -301,6 +301,7 @@ native_oai_config = {
     # 'max_tokens': 8192,                            # int 默认 8192
     # 'proxy': 'http://127.0.0.1:2082',              # 可选单 session HTTP 代理
     # 'context_win': 16000,                          # int 默认 24000；历史裁剪阈值
+    # 'max_num_turns': 10,                           # int 默认 0(不限制)；滑动窗口保留最大轮数(含当轮)，改善缓存命中率
 }
 
 # ── 也可以走 Responses API ──────────────────────────────────────────────────
