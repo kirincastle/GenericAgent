@@ -150,3 +150,27 @@ frontends/conductor_im_plugins/config.local.json
 !memory/caveman/
 !memory/caveman/**
 
+# ============================
+# Critical memory files — L1/L2/L3 knowledge
+# ============================
+!memory/global_mem_insight.txt    # L1 — quick-reference index
+!memory/global_mem.txt            # L2 — accumulated project facts
+
+# ============================
+# Neat-freak skill (project-specific integration added)
+# ============================
+!memory/neat-freak/
+!memory/neat-freak/**
+
+# ============================
+# Deploy SOPs and recovery SOP
+# ============================
+!memory/oc2api_deploy_sop.md
+!memory/recovery_sop.md
+
+# ============================
+# Root-level tool files
+# ============================
+!model_registry.py
+!CLAUDE.md
+

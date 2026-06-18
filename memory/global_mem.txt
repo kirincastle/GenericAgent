@@ -1,0 +1,135 @@
+# [Global Memory - L2]
+
+## Primary Branch Strategy (2026-06-16)
+- **Long-term working branch**: `rtk-integration`
+- All skills, tools, improvements committed here
+- Main reserved for stable/release merges
+
+## RTK Integration (2026-06-16)
+- Source: https://github.com/rtk-ai/rtk
+- Files: memory/rtk_integration.py, memory/rtk_tool.py
+- Branch: rtk-integration (long-term)
+- Type: tool integration + hook (auto-inject RTK usage instruction into system prompt)
+- Status: committed on rtk-integration
+
+## Caveman Compression Skill (2026-06-16)
+- Source: https://github.com/JuliusBrussee/caveman
+- Files: memory/caveman/SKILL.md, memory/caveman_integration.py
+- Branch: rtk-integration (cherry-picked from caveman-skill)
+- Type: skill + hook (auto-inject SKILL.md into system prompt)
+- Status: committed on rtk-integration
+
+## Git Remote Config (2026-06-16)
+- User GitHub: kirincastle (verified via SSH)
+- Origin (personal fork): git@github.com:kirincastle/GenericAgent.git
+- Upstream: https://github.com/Lsdefine/GenericAgent.git
+- Auth method: SSH (key at ~/.ssh/)
+- Branch workflow: all changes on rtk-integration → push to own fork
+
+## Cache Hit Optimization (2026-06-17)
+- **Problem**: `_slide_window_history` sends full session each turn → prefix changes → 0% cache hit
+- **Fix**: Added `max_num_turns: 8` in config_loader.json5, .codex-config.json5, frontend-h5 template
+- **Mechanism**: Limits history window to 8 turns → stable prefix → cache hit recovers
+- **Files**: config_loader.json5, .codex-config.json5, frontend-h5 template
+
+## Latest Neat-Freak Session (2026-06-17)
+- **Record**: `docs/handoff.md` — full session actions + unresolved items
+- **Trigger**: user requested neat cleanup (2nd session)
+- **Key outputs**: Cache Hit Optimization, SOCKS5 轮询切换 options, v6 node, 429 auto-recovery, Console Log card (in progress via goal mode)
+- **Updated files**: docs/handoff.md, oc2api/docs/handoff-2026-06-17.md, memory/global_mem.txt
+
+## OC2API Service Ports (2026-06-17)
+- **Project path**: `/home/moclaw/projects/oc2api`
+- **Deploy target**: `jpkbb` (100.127.66.71) via **Tailscale** network
+  - **SSH**: `root@100.127.66.71` (no password, key-based)
+  - **Binary path**: `/opt/oc2api/`
+  - **Config**: `/opt/oc2api/config.json`
+  - **Log**: `/tmp/oc2api-v3.1.log`
+  - All oc2api versions deploy here
+- **Port assignments** (user rule):
+  - `8000` = opencode2api **v3** (master branch)
+  - `8001` = v4
+  - `8005` = v5
+  - `8006` = v6
+- ⚠️ **ds2api trap**: `/home/moclaw/projects/oc2api` also contains a `ds2api` (old proxy). ds2api uses upstream `https://opencode.ai/zen/go/v1` (returns 19 models, NO -free variants). opencode2api v3 uses upstream `https://opencode.ai/zen/v1/chat/completions` (returns 48 models including -free). If CC fails with "Model not found" for -free models, check that opencode2api (not ds2api) is running on the port.
+- **v3 verified**: master branch (v3.015), built at `/home/moclaw/projects/oc2api`, model_alias configured for `ds→deepseek-v4-flash-free`
+- **GUI version format** (user mandate): `v3.xxx + short hash + date` — e.g. `v3.003 26ff2e5 (2026-06-16)`. Implemented via `build.sh` using `go build -ldflags` injecting commit hash + build time. Binary name convention: `opencode2api_vX.XXX` (parsed for version).
+
+## Proxy Health Enhancement (2026-06-17)
+- Bad proxy detection: connection timeout/SOCKS5 error → mark bad, no need 429
+- 429 triggers rotation to next alive proxy (not just rate-limit config)
+- 50%+ bad → 触发 xray 订阅刷新（宿主机 `/root/xray-proxy/sync-sub.py`，非 container 内 subscription 命令）
+- Recently-429'd alive proxies can be rotated back
+- Subscription refresh **always** runs before cooldown check (every `rotateXrayProxy()` call regardless of cooldown), compiled into binary, persists across upgrades
+- Bugfix: was after cooldown check — high 429 frequency hit cooldown, skipped refresh
+- **Gotcha**: 429 count is per-node (in-memory), NOT per-proxy. Same proxy pool shared by v3/v6 can show 429 on one node but healthy on another.
+- **429 auto-recovery** (v3.013+): `proxy429RecoveryCount` counter, reset on new 429, clear after 3 consecutive healthy probes. Commit `817eb0c`
+- Code: opencode2api.go, deployed v3.009→v3.015
+
+## Build Optimization (2026-06-17)
+- rsync -z instead of scp (compressed, single connection)
+- git push runs in background during build (`&` + `wait`)
+- systemd management (stop/start) instead of kill/restart
+- build.sh does everything: bump → commit → push (bg) → build → rsync → systemd restart
+
+## User Preference: Auto-Deploy (2026-06-17)
+- **Rule**: After any code change that compiles, deploy automatically. Never ask "deploy?".
+- **Workflow**: code fix → go build → build.sh deploy PORT → done
+
+## Socks5 Proxy Sync Fix (2026-06-17)
+- **Root cause**: `sync-sub.py` updates xray config only, not oc2api's `socks5Proxies` in memory or `config.json`. Subscription reduces node count → dead port lingers.
+- **Fix**: Added `syncSocks5FromXrayConfig()` — reads `/root/xray-proxy/config.json` inbounds, rebuilds `socks5Proxies`, saves to `config.json`
+- **Integration**: Called from `rotateXrayProxy()` after `sync-sub.py` succeeds (line 572)
+- **Deployed**: v3.012
+
+## UI Toggle Fix (2026-06-17)
+- Per-proxy token stats: expand/collapse toggle button
+- State persists across auto-refresh cycles
+- Deployed in v3.007, verified working
+
+## SOCKS5 轮询切换 Options (2026-06-17)
+- **轮询（自动切换-不包括直连）**: 原轮询切换逻辑，仅轮询 SOCKS5 代理
+- **轮询（自动切换-包括直连）**: 轮询中混入 direct 直连（commit f432da7）
+- **Deployed**: v3.015
+
+## Console Log Card (v3.027)
+- **Deployed**: v3.016→v3.027 (2026-06-18), 14+ wake cycles.
+- **Frontend**: auto-refresh 3s, color-coded by level, clear button, ring buffer cap 200, auto-scroll toggle (📌 Auto, default OFF), unread badge, retryCount display
+- **Backend**: `addLogEntry(level, component, msg)` + `logPrintf` helper + in-memory logBuffer + adminLogsHandler (GET/DELETE)
+- **Fixes applied (v3.017–v3.027)**: auto-scroll OFF default + state persistence, table-layout, word-break, log-DEBUG CSS class injection, aria-live accessibility, flex-wrap, code cleanup, retryCount, unread badge, HKT timezone display
+- **Known unfixed bugs**: BUG-1 [P1] scrollTop reset on every poll (el.innerHTML); BUG-2 [P2] unread badge broken in auto-scroll mode; B2 race condition
+- **HKT Timezone (v3.027)**: `time.Now().In(time.FixedZone("HKT", 8*3600)).Format("01-02 15:04:05")` in `addLogEntry`
+- **Inspections**: Wake27 (26/26 ✓), Wake30 (4 items). Reports: `temp/wake*/`
+
+## probeModelStatus 优化 (2026-06-18)
+- **问题**: 每 10min 探测全部模型（含 paid）→ 浪费请求 + 日志噪音
+- **优化**: 只探测名字含 "free" 或 "big-pickle" 的模型；也只透传这些 free 模型到下游
+- **Deployed**: v3.024 (oc2api)
+- **相关文件**: opencode2api.go (probeModels / isFreeModel / modelStatusHandler)
+
+## GUI 加载问题诊断教训 (2026-06-18)
+- **症状**: v3.024 部署后管理面板大量 "加载中"
+- **误诊**: 怀疑 JS 语法错误（window.onload 末尾 `({})`）
+- **根因**: 后端服务刚重启，模型探测/代理健康尚未完成第一轮循环
+- **教训**: GUI "加载中" → 先检查后端服务状态，非 JS 问题
+
+## model_registry 模块 (2026-06-18)
+- **来源**: `https://models.dev/api.json` — 147+ provider 模型规格
+- **文件**: `model_registry.py` (项目根目录)
+- **功能**: 查模型 context / output / cost / reasoning
+- **集成**: `llmcore.py` BaseSession.__init__ 自动校正 context_win
+- **换算**: `context_win = context_tokens * 4 / 2` (cost 返 chars, cap=context_win*2)
+- **CLI**: `--refresh` 刷新缓存；`--show <model>` 查模型；`--check-cfg` 校验 mykey.py
+- **缓存**: `temp/model_registry_cache.json`，24h 过期
+
+## jpkbb 服务器 timezone → HKT (2026-06-18)
+- **原时区**: `America/New_York` (EDT, UTC-5)
+- **改后**: `Asia/Hong_Kong` (HKT, UTC+8)
+- **命令**: `timedatectl set-timezone Asia/Hong_Kong`
+- **验证**: `timedatectl` → Local time: `2026-06-18 10:37:14 HKT`
+- **Console Log 时间**: 服务重启后日志时间自动使用系统 HKT，但代码层也加了 `time.FixedZone("HKT", 8*3600)` 双重保障
+
+## Cache Hit Fix — deepseek configs (2026-06-18)
+- **Root cause**: `max_num_turns:8` 致 slide_window 每 8 轮删中间消息 → 前缀变 → 缓存失效；`context_win:28000` 致 ~33K chars 触发 pop-from-front
+- **Fix**: 4 个 deepseek 配置统一 `max_num_turns:8→80`，`context_win:28000→400000`
+- **预期**: 长对话缓存命中率 30-40% → 98%+
