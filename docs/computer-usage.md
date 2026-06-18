@@ -1,3 +1,10 @@
+---
+type: reference
+title: "Computer Usage — GUI Automation Overview"
+tags: [genericagent, documentation]
+intent: "Technical reference document"
+schema_source: okf
+---
 # Computer Usage — GUI Automation Overview
 
 GenericAgent can interact with GUI applications on Windows, macOS, and Linux through a layered automation pipeline. This document describes the capability at a high level; detailed agent instructions live in `memory/computer_use.md`.

@@ -1,3 +1,9 @@
+---
+type: wiki-chapter
+title: "飞书 Agent 配置指南"
+tags: [genericagent, documentation]
+intent: "Project documentation chapter"
+---
 # 飞书 Agent 配置指南
 
 > 让你的个人电脑变成飞书机器人的大脑，随时随地通过飞书对话控制你的电脑。

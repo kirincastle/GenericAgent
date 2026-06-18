@@ -1,3 +1,9 @@
+---
+type: readme
+title: "GenericAgent — Project Guide for AI"
+tags: [genericagent]
+intent: "Project overview and usage guide"
+---
 # GenericAgent — Project Guide for AI
 
 ## Overview

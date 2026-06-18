@@ -1,3 +1,10 @@
+---
+type: reference
+title: "Vue 3 自定义组件 JS 操作 SOP"
+tags: [genericagent, documentation]
+intent: "Technical reference document"
+schema_source: okf
+---
 # Vue 3 自定义组件 JS 操作 SOP
 
 ## 问题

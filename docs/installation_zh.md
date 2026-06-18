@@ -1,3 +1,9 @@
+---
+type: wiki-chapter
+title: "安装指南（中文）"
+tags: [genericagent, documentation]
+intent: "Project documentation chapter"
+---
 # 安装指南（中文）
 
 这是 **GenericAgent** 的详细安装指南。

@@ -1,3 +1,9 @@
+---
+type: wiki-chapter
+title: "GenericAgent 桌面版安装指南"
+tags: [genericagent, documentation]
+intent: "Project documentation chapter"
+---
 # GenericAgent 桌面版安装指南
 
 ## 📦 安装步骤

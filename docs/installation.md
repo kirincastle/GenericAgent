@@ -1,3 +1,9 @@
+---
+type: wiki-chapter
+title: "Installation Guide"
+tags: [genericagent, documentation]
+intent: "Project documentation chapter"
+---
 # Installation Guide
 
 This is the detailed installation guide for **GenericAgent**.

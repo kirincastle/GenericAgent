@@ -1,3 +1,9 @@
+---
+type: wiki-chapter
+title: "🚀 新手上手指南"
+tags: [genericagent, documentation]
+intent: "Project documentation chapter"
+---
 # 🚀 新手上手指南
 
 > 完全没接触过编程也没关系，跟着做就行。Mac / Windows 都适用。

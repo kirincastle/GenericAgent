@@ -22,3 +22,4 @@ Mobile: adb_ui.py
 7. Web JS: use native setter + event chain for input, check disabled before click, mind quote escaping; if scan empty/incomplete wait then rescan, no conclusions from first scan
 8. SOP: read SOPs not from memory, must use utils if available | complex long-running/user mentions planning -> read plan_sop
 9. Browser kill: Windows Chrome (galley) kill/restart must ask user first; Linux Chrome is free
+10. **路径规范**: 所有路径引用必须用绝对路径或明确以项目根为基准的相对路径，禁止歧义路径（如裸 `docs/`）

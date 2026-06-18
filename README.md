@@ -1,3 +1,9 @@
+---
+type: readme
+title: "GenericAgent"
+tags: [genericagent]
+intent: "Project overview and usage guide"
+---
 <div align="center">
 
 <img src="assets/images/bar.jpg" width="880" alt="GenericAgent Banner"/>
