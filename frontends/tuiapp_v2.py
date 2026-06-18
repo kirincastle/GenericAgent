@@ -24,9 +24,16 @@ import time
 import subprocess
 import shutil
 
+# Make project root importable so `import ga_cache` works whether run
+# as `python frontends/tuiapp_v2.py` or `python -m frontends.tuiapp_v2`.
+_proj_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if _proj_root not in sys.path:
+    sys.path.insert(0, _proj_root)
+
 # Local: cross-platform shortcut-label formatter (Win/Linux "Ctrl+B" vs mac "⌃B").
 # Imported early because _TIPS at module load time uses fmt_key().
 from keysym import fmt_key, fmt_keys  # noqa: E402
+import ga_cache
 from dataclasses import dataclass, field
 from itertools import count
 from typing import Any, Callable, Optional
@@ -3579,6 +3586,7 @@ class GenericAgentTUI(App[None]):
             "morphling": self._cmd_slash_inject, "goal": self._cmd_slash_inject,
             "hive": self._cmd_slash_inject, "conductor": self._cmd_slash_inject,
             "scheduler": self._cmd_scheduler,
+            "cache": self._cmd_cache,
             "quit": self._cmd_quit, "exit": self._cmd_quit,
         }
         try:
@@ -5568,6 +5576,15 @@ class GenericAgentTUI(App[None]):
             lines += _section(sess.agent_id, sess, t)
             lines += _sub_section()
         self._system("\n".join(lines))
+
+    def _cmd_cache(self, args, raw):
+        """Display cache hit statistics."""
+        try:
+            import ga_cache
+            report = ga_cache.report(text_only=True)
+            self._system(f"📊 Cache Hit Stats\n\n{report}")
+        except Exception as e:
+            self._system(f"❌ ga_cache error: {e}")
 
     def _cmd_export(self, args, raw):
         """Forms:
