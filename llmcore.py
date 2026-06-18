@@ -1,5 +1,6 @@
 import os, json, re, time, requests, sys, threading, urllib3, base64, importlib, uuid, pathlib
 from datetime import datetime
+import ga_cache
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 _RESP_CACHE_KEY = str(uuid.uuid4()); _RESP_CODEX_KEY = str(uuid.uuid4())
 _ROOT = os.path.dirname(os.path.abspath(__file__))
@@ -329,6 +330,7 @@ def _record_usage(usage, api_mode):
     elif api_mode == 'messages':
         ci, cr, inp = usage.get("cache_creation_input_tokens", 0), usage.get("cache_read_input_tokens", 0), usage.get("input_tokens", 0)
         print(f"[Cache] input={inp} creation={ci} read={cr}")
+    ga_cache.after_request(ga_cache._current_model, usage)
     
 def _parse_openai_json(data, api_mode="chat_completions"):
     blocks = []
@@ -413,6 +415,8 @@ def _stream_with_retry(sess, url, headers, payload, parse_fn):
 
 def _openai_stream(sess, messages):
     model, api_mode = sess.model, sess.api_mode
+    ga_cache.before_request(sess.model, messages)
+    ga_cache._current_model = sess.model
     ml = model.lower()
     temperature = sess.temperature
     if 'kimi' in ml or 'moonshot' in ml: temperature = 1
