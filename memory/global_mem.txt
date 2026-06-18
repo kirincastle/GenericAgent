@@ -33,7 +33,14 @@
 - **Files**: config_loader.json5, .codex-config.json5, frontend-h5 template
 - **2026-06-18 Fix**: `ga_cache.py after_request()` 字段映射修復 — DeepSeek/OpenAI 用 `prompt_tokens_details.cached_tokens` (cache_read)，Anthropic 用 `cache_read_input_tokens` / `cache_creation_input_tokens`。原来是 `cached_tokens` fallback 错误赋给 `ci`(creation) 而非 `cr`(read)，导致 GA Cache 统计显示 0% 命中而实际 Token usage 正常。
 
-## Latest Neat-Freak Session (2026-06-17)
+## Matt Pocock Skills Integration (2026-06-18)
+- **Source**: https://github.com/mattpocock (17 engineering skills)
+- **Location**: `../temp/.agents/skills/` (18 skill directories)
+- **Files**: memory/mattpocock_integration.py, frontends/tuiapp_v2.py (palette patch)
+- **Type**: index + on-demand loading via agent_before hook
+- **Mechanism**: lightweight index (~2800 chars) injected into system prompt every turn; full SKILL.md loaded only when user activates a skill via `/skillname`
+- **TUI integration**: skills appear in `/` autocomplete palette
+- **Status**: committed on rtk-integration
 - **Record**: `docs/handoff.md` — full session actions + unresolved items
 - **Trigger**: user requested neat cleanup (2nd session)
 - **Key outputs**: Cache Hit Optimization, SOCKS5 轮询切换 options, v6 node, 429 auto-recovery, Console Log card (in progress via goal mode)

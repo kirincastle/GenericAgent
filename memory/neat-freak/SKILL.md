@@ -102,6 +102,7 @@ description: >
    - `ls <project-root>/` → 确认根目录结构
    - `ls <project-root>/docs/ 2>/dev/null` → **枚举所有 docs**（缺失也要确认）
    - `find <project-root> -maxdepth 2 -name "*.md" -not -path "*/node_modules/*" -not -path "*/.git/*"` → 兜底抓散落的 .md
+   - `find_docs.py --repo <project-root> lint`（若 okf-frontmatter 已安装）→ 检查每个文档的 OKF frontmatter 合规状态
    - 读 `README.md`、`CLAUDE.md` / `AGENTS.md`、每一个 `docs/*.md`
 3. 读全局 agent 配置（若有，如 `~/.claude/CLAUDE.md`、`~/.codex/AGENTS.md`）
 4. 回顾本次对话全部内容
@@ -302,6 +303,13 @@ L1 更新: `console_log_card(v3.027+)` + `jpkbb_timezone(hkt)` + `model_registry
 | 第零步：尺寸体检 | `wc -l memory/global_mem.txt`, `wc -c memory/global_mem_insight.txt` |
 | 第一步：盘点现状 | 读 L1+L2+L3，列出 model_responses/ 近期文件 |
 | 第二步：变更影响矩阵 | 对照上方「更新决策树」判断每段对话的影响范围 |
-| 第三步：实际修改 | 优先 `file_patch` L2，再改 L3 SOP，最后 `file_patch` L1 |
-| 第四步：自检清单 | 检查 L2 格式规范、L1 ≤30行、L3 故障表是否冗余 |
+| 第三步：实际修改 | 优先 `file_patch` L2，再改 L3 SOP，最后 `file_patch` L1；对涉及 docs 的新增/修改，**用 `find_docs.py new <type> <name>` 生成标准骨架，手动填充** |
+| 第四步：自检清单 | 检查 L2 格式规范、L1 ≤30行、L3 故障表是否冗余；对本次修改过的 docs 跑 `find_docs.py --repo <root> lint` 确认 frontmatter 完整 |
 | 第五步：变更摘要 | 按「L2 变更 / L3 变更 / L1 变更」分组输出 |
+
+## 参考技能
+
+| 技能 | 位置 | 在 neat-freak 中的用途 |
+|------|------|----------------------|
+| okf-frontmatter | `temp/.agents/skills/okf-frontmatter/` | docs 的 frontmatter 合规检查（lint）、骨架生成（new）、索引更新（index）。被 Step 1（盘点）和 Step 4（自检）引用 |
+| caveman | `memory/caveman/SKILL.md` | 输出压缩，变更摘要阶段可用 |

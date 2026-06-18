@@ -71,6 +71,7 @@ The system prompt is built by `ga.py` → `get_global_memory()`:
 | Mobile automation | `memory/adb_ui.py` | AI |
 | RTK token processing | `memory/rtk_integration.py`, `memory/rtk_tool.py` | AI |
 | Response compression (caveman) | `memory/caveman/SKILL.md` | AI |
+| Matt Pocock engineering skills | `memory/mattpocock_integration.py` (index + on-demand), `../temp/.agents/skills/` (18 skills) | AI |
 | Subagent coordination | `memory/subagent.md` | AI |
 | Installation (EN) | `docs/installation.md` | Human |
 | Installation (ZH) | `docs/installation_zh.md` | Human |
