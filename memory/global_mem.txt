@@ -136,9 +136,19 @@
 - **Console Log 时间**: 服务重启后日志时间自动使用系统 HKT，但代码层也加了 `time.FixedZone("HKT", 8*3600)` 双重保障
 
 ## Cache Hit Fix — deepseek configs (2026-06-18)
-...[Truncated]...
+- **Problem**: 4 deepseek 配置不统一，部分 context_win 太小 → 长对话截断 → 缓存失效
 - **Fix**: 4 个 deepseek 配置统一 `max_num_turns:8→80`，`context_win:28000→400000`
 - **预期**: 长对话缓存命中率 30-40% → 98%+
+
+## Headroom Morphling — ga_cache (2026-06-18)
+- **Source**: headroom v0.26.0 (chopratejas/headroom), Apache 2.0
+- **Morphling 行为**: 重写 PrefixCacheTracker + 调用 SmartCrusher(Rust PyO3)
+- **产物**:
+  - `ga_cache.py` — ~290行纯 Python cache tracker，零外部依赖
+  - `llmcore.py` 打 2 处补丁 (`import ga_cache`, before_request/after_request 钩子)
+- **效果**: 所有 provider (v3/v6/v4/9router) 统一 cache tracking，model 自动从 `self.model` 读取不写死
+- **取舍**: 舍弃 headroom proxy(178包+dashboard)，保留核心 tracking + CLI report(`python -m ga_cache`)
+- **验证**: 模拟 3 轮测试通过，cache hit 追踪正常
 
 ## 浏览器使用权限 (2026-06-18)
 - **Linux Chrome**: 可自由操作（含 kill/重启），用户也在用但无限制

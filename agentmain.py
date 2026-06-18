@@ -11,6 +11,7 @@ from agent_loop import agent_runner_loop
 try:
     from plugins.hooks import discover_and_load; discover_and_load()
 except Exception: pass
+import ga_cache
 from ga import GenericAgentHandler, smart_format, get_global_memory, format_error, consume_file
 
 script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -129,6 +130,10 @@ class GenericAgent:
             return None
         if raw_query.strip() == '/resume':
             return r'帮我看看最近有哪些会话可以恢复。读model_responses/目录，按修改时间取最近10个文件，从每个文件里找最后一个<history>...</history>块，用一句话总结每个会话在聊什么，列表给我选。注意读文件后要把字面的\n替换成真换行才能正确匹配。'
+        if raw_query.strip() == '/cache':
+            report = ga_cache.report(text_only=True)
+            display_queue.put({'done': f'📊 Cache Hit Stats\n\n{report}', 'source': 'system'})
+            return None
         return raw_query
 
     def run(self):
