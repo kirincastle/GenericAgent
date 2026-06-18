@@ -524,7 +524,7 @@ class GenericAgentHandler(BaseHandler):
 
     def do_codegraph_query(self, args, response):
         from memory.codegraph_tool import cg_query
-        project = os.path.dirname(os.path.abspath(__file__))
+        project = self._codegraph_project()
         r = cg_query(project, args.get('query', ''))
         if not r['ok']: return StepOutcome({'error': r['error']})
         out = [f"**{n['name']}** ({n['kind']}) — {n['file_path']}:{n.get('start_line','?')}"
@@ -533,7 +533,7 @@ class GenericAgentHandler(BaseHandler):
 
     def do_codegraph_node(self, args, response):
         from memory.codegraph_tool import cg_node
-        project = os.path.dirname(os.path.abspath(__file__))
+        project = self._codegraph_project()
         r = cg_node(project, args.get('name', ''))
         if not r['ok']: return StepOutcome({'error': r['error']})
         n = r['node']
@@ -547,7 +547,7 @@ class GenericAgentHandler(BaseHandler):
 
     def do_codegraph_callers(self, args, response):
         from memory.codegraph_tool import cg_callers
-        project = os.path.dirname(os.path.abspath(__file__))
+        project = self._codegraph_project()
         r = cg_callers(project, args.get('name', ''))
         if not r['ok']: return StepOutcome({'error': r['error']})
         if not r['callers']: return StepOutcome("No callers found.")
@@ -557,7 +557,7 @@ class GenericAgentHandler(BaseHandler):
 
     def do_codegraph_callees(self, args, response):
         from memory.codegraph_tool import cg_callees
-        project = os.path.dirname(os.path.abspath(__file__))
+        project = self._codegraph_project()
         r = cg_callees(project, args.get('name', ''))
         if not r['ok']: return StepOutcome({'error': r['error']})
         if not r['callees']: return StepOutcome("No callees found.")
@@ -567,7 +567,7 @@ class GenericAgentHandler(BaseHandler):
 
     def do_codegraph_impact(self, args, response):
         from memory.codegraph_tool import cg_impact
-        project = os.path.dirname(os.path.abspath(__file__))
+        project = self._codegraph_project()
         r = cg_impact(project, args.get('name', ''))
         if not r['ok']: return StepOutcome({'error': r['error']})
         out = []
@@ -583,13 +583,20 @@ class GenericAgentHandler(BaseHandler):
 
     def do_codegraph_files(self, args, response):
         from memory.codegraph_tool import cg_files
-        project = os.path.dirname(os.path.abspath(__file__))
+        project = self._codegraph_project()
         r = cg_files(project, args.get('pattern', ''))
         if not r['ok']: return StepOutcome({'error': r['error']})
         if not r['files']: return StepOutcome("No files indexed.")
         out = [f"**{f['path']}**  ({f.get('language','?')}, {f.get('node_count',0)} nodes)"
                for f in r['files']]
         return StepOutcome(f"{r['count']} files:\n" + "\n".join(out))
+
+    def _codegraph_project(self):
+        """Resolve codegraph project root: cwd if it has .codegraph/, else ga.py dir."""
+        cwd_cg = os.path.join(self.cwd, '.codegraph')
+        if os.path.isdir(cwd_cg):
+            return os.path.normpath(os.path.join(self.cwd))
+        return os.path.dirname(os.path.abspath(__file__))
 
     def _fold_earlier(self, lines):
         FALLBACK = '直接回答了用户问题'
