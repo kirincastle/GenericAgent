@@ -161,3 +161,10 @@
 ## 浏览器使用权限 (2026-06-18)
 - **Linux Chrome**: 可自由操作（含 kill/重启），用户也在用但无限制
 - **Windows Chrome (galley)**: 正常浏览操作随意，kill/重启必须提前问用户
+
+## oc2api Route B 重构 (2026-06-18)
+- **背景**: proxy.go 早已独立但 opencode2api.go 仍内联重复的代理段（L34-L803），形成双份代码
+- **动作**: 从 opencode2api.go 删除内联代理段，proxy.go 清理未用 import（bufio）和不属 proxy 的函数（randomString/randomHex）
+- **admin embed**: adminHTML 从 `const adminHTML = \`...\`` 字符串提取为 admin/index.html，通过 `//go:embed` 加载
+- **编译验证**: `go build ./...` + `go vet ./...` 均通过
+- **部署**: v3.027 → v3.028，`bash build.sh deploy 8000` 一键成功
