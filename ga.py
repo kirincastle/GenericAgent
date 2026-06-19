@@ -526,16 +526,16 @@ class GenericAgentHandler(BaseHandler):
         from memory.codegraph_tool import cg_query
         project = self._codegraph_project()
         r = cg_query(project, args.get('query', ''))
-        if not r['ok']: return StepOutcome({'error': r['error']})
+        if not r['ok']: return StepOutcome({'error': r['error']}, next_prompt='\n')
         out = [f"**{n['name']}** ({n['kind']}) — {n['file_path']}:{n.get('start_line','?')}"
                for n in r['rows']]
-        return StepOutcome(f"Found {r['count']} symbols:\n" + "\n".join(out))
+        return StepOutcome(f"Found {r['count']} symbols:\n" + "\n".join(out), next_prompt='\n')
 
     def do_codegraph_node(self, args, response):
         from memory.codegraph_tool import cg_node
         project = self._codegraph_project()
         r = cg_node(project, args.get('name', ''))
-        if not r['ok']: return StepOutcome({'error': r['error']})
+        if not r['ok']: return StepOutcome({'error': r['error']}, next_prompt='\n')
         n = r['node']
         out = [f"## {n['name']} ({n['kind']})"]
         out.append(f"**Location:** {n['file_path']}:{n.get('start_line','?')}")
@@ -543,33 +543,33 @@ class GenericAgentHandler(BaseHandler):
         if n.get('signature'): out.append(f"**Signature:** {n['signature']}")
         if n.get('docstring'): out.append(f"**Docstring:** {n['docstring'][:500]}")
         out.append(f"**Callers count:** {n.get('callers_count',0)}  |  **Callees count:** {n.get('callees_count',0)}")
-        return StepOutcome("\n".join(out))
+        return StepOutcome("\n".join(out), next_prompt='\n')
 
     def do_codegraph_callers(self, args, response):
         from memory.codegraph_tool import cg_callers
         project = self._codegraph_project()
         r = cg_callers(project, args.get('name', ''))
-        if not r['ok']: return StepOutcome({'error': r['error']})
-        if not r['callers']: return StepOutcome("No callers found.")
+        if not r['ok']: return StepOutcome({'error': r['error']}, next_prompt='\n')
+        if not r['callers']: return StepOutcome("No callers found.", next_prompt='\n')
         out = [f"**{e['name']}** — {e['file_path']}:{e.get('start_line','?')}"
                for e in r['callers']]
-        return StepOutcome(f"{r['count']} callers:\n" + "\n".join(out))
+        return StepOutcome(f"{r['count']} callers:\n" + "\n".join(out), next_prompt='\n')
 
     def do_codegraph_callees(self, args, response):
         from memory.codegraph_tool import cg_callees
         project = self._codegraph_project()
         r = cg_callees(project, args.get('name', ''))
-        if not r['ok']: return StepOutcome({'error': r['error']})
-        if not r['callees']: return StepOutcome("No callees found.")
+        if not r['ok']: return StepOutcome({'error': r['error']}, next_prompt='\n')
+        if not r['callees']: return StepOutcome("No callees found.", next_prompt='\n')
         out = [f"**{e['name']}** — {e['file_path']}:{e.get('start_line','?')}"
                for e in r['callees']]
-        return StepOutcome(f"{r['count']} callees:\n" + "\n".join(out))
+        return StepOutcome(f"{r['count']} callees:\n" + "\n".join(out), next_prompt='\n')
 
     def do_codegraph_impact(self, args, response):
         from memory.codegraph_tool import cg_impact
         project = self._codegraph_project()
         r = cg_impact(project, args.get('name', ''))
-        if not r['ok']: return StepOutcome({'error': r['error']})
+        if not r['ok']: return StepOutcome({'error': r['error']}, next_prompt='\n')
         out = []
         if r.get('callers_chain'):
             out.append("### Upstream (callers):")
@@ -577,19 +577,19 @@ class GenericAgentHandler(BaseHandler):
         if r.get('callees_chain'):
             out.append("### Downstream (callees):")
             out.extend(f"  {c['name']} @ {c['file_path']}:{c.get('start_line','?')}" for c in r['callees_chain'])
-        if not out: return StepOutcome(f"Node '{args.get('name','')}' found but no connections traced.")
+        if not out: return StepOutcome(f"Node '{args.get('name','')}' found but no connections traced.", next_prompt='\n')
         out.append(f"\nAffected files: {', '.join(r.get('affected_files', []))}" if r.get('affected_files') else "")
-        return StepOutcome("\n".join(out))
+        return StepOutcome("\n".join(out), next_prompt='\n')
 
     def do_codegraph_files(self, args, response):
         from memory.codegraph_tool import cg_files
         project = self._codegraph_project()
         r = cg_files(project, args.get('pattern', ''))
-        if not r['ok']: return StepOutcome({'error': r['error']})
-        if not r['files']: return StepOutcome("No files indexed.")
+        if not r['ok']: return StepOutcome({'error': r['error']}, next_prompt='\n')
+        if not r['files']: return StepOutcome("No files indexed.", next_prompt='\n')
         out = [f"**{f['path']}**  ({f.get('language','?')}, {f.get('node_count',0)} nodes)"
                for f in r['files']]
-        return StepOutcome(f"{r['count']} files:\n" + "\n".join(out))
+        return StepOutcome(f"{r['count']} files:\n" + "\n".join(out), next_prompt='\n')
 
     def _codegraph_project(self):
         """Resolve codegraph project root: cwd if it has .codegraph/, else ga.py dir."""
