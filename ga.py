@@ -522,19 +522,25 @@ class GenericAgentHandler(BaseHandler):
 
     # ── CodeGraph tools (morphling from colbymchenry/codegraph) ──
 
+    def _cg_reload(self):
+        """Import codegraph_tool with reload to pick up file edits without restart."""
+        import importlib, memory.codegraph_tool as _cgt
+        importlib.reload(_cgt)
+        return _cgt
+
     def do_codegraph_query(self, args, response):
-        from memory.codegraph_tool import cg_query
+        cgt = self._cg_reload()
         project = self._codegraph_project()
-        r = cg_query(project, args.get('query', ''))
+        r = cgt.cg_query(project, args.get('query', ''))
         if not r['ok']: return StepOutcome({'error': r['error']}, next_prompt='\n')
         out = [f"**{n['name']}** ({n['kind']}) — {n['file_path']}:{n.get('start_line','?')}"
                for n in r['rows']]
         return StepOutcome(f"Found {r['count']} symbols:\n" + "\n".join(out), next_prompt='\n')
 
     def do_codegraph_node(self, args, response):
-        from memory.codegraph_tool import cg_node
+        cgt = self._cg_reload()
         project = self._codegraph_project()
-        r = cg_node(project, args.get('name', ''))
+        r = cgt.cg_node(project, args.get('name', ''))
         if not r['ok']: return StepOutcome({'error': r['error']}, next_prompt='\n')
         n = r['node']
         out = [f"## {n['name']} ({n['kind']})"]
@@ -546,9 +552,9 @@ class GenericAgentHandler(BaseHandler):
         return StepOutcome("\n".join(out), next_prompt='\n')
 
     def do_codegraph_callers(self, args, response):
-        from memory.codegraph_tool import cg_callers
+        cgt = self._cg_reload()
         project = self._codegraph_project()
-        r = cg_callers(project, args.get('name', ''))
+        r = cgt.cg_callers(project, args.get('name', ''))
         if not r['ok']: return StepOutcome({'error': r['error']}, next_prompt='\n')
         if not r['callers']: return StepOutcome("No callers found.", next_prompt='\n')
         out = [f"**{e['name']}** — {e['file_path']}:{e.get('start_line','?')}"
@@ -556,9 +562,9 @@ class GenericAgentHandler(BaseHandler):
         return StepOutcome(f"{r['count']} callers:\n" + "\n".join(out), next_prompt='\n')
 
     def do_codegraph_callees(self, args, response):
-        from memory.codegraph_tool import cg_callees
+        cgt = self._cg_reload()
         project = self._codegraph_project()
-        r = cg_callees(project, args.get('name', ''))
+        r = cgt.cg_callees(project, args.get('name', ''))
         if not r['ok']: return StepOutcome({'error': r['error']}, next_prompt='\n')
         if not r['callees']: return StepOutcome("No callees found.", next_prompt='\n')
         out = [f"**{e['name']}** — {e['file_path']}:{e.get('start_line','?')}"
@@ -566,9 +572,9 @@ class GenericAgentHandler(BaseHandler):
         return StepOutcome(f"{r['count']} callees:\n" + "\n".join(out), next_prompt='\n')
 
     def do_codegraph_impact(self, args, response):
-        from memory.codegraph_tool import cg_impact
+        cgt = self._cg_reload()
         project = self._codegraph_project()
-        r = cg_impact(project, args.get('name', ''))
+        r = cgt.cg_impact(project, args.get('name', ''))
         if not r['ok']: return StepOutcome({'error': r['error']}, next_prompt='\n')
         out = []
         if r.get('callers_chain'):
@@ -582,9 +588,9 @@ class GenericAgentHandler(BaseHandler):
         return StepOutcome("\n".join(out), next_prompt='\n')
 
     def do_codegraph_files(self, args, response):
-        from memory.codegraph_tool import cg_files
+        cgt = self._cg_reload()
         project = self._codegraph_project()
-        r = cg_files(project, args.get('pattern', ''))
+        r = cgt.cg_files(project, args.get('pattern', ''))
         if not r['ok']: return StepOutcome({'error': r['error']}, next_prompt='\n')
         if not r['files']: return StepOutcome("No files indexed.", next_prompt='\n')
         out = [f"**{f['path']}**  ({f.get('language','?')}, {f.get('node_count',0)} nodes)"
