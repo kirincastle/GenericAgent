@@ -71,7 +71,8 @@
   - `8006` = v6
 - ⚠️ **ds2api trap**: `/home/moclaw/projects/oc2api` also contains a `ds2api` (old proxy). ds2api uses upstream `https://opencode.ai/zen/go/v1` (returns 19 models, NO -free variants). opencode2api v3 uses upstream `https://opencode.ai/zen/v1/chat/completions` (returns 48 models including -free). If CC fails with "Model not found" for -free models, check that opencode2api (not ds2api) is running on the port.
 - **v3 verified**: master branch (v3.015), built at `/home/moclaw/projects/oc2api`, model_alias configured for `ds→deepseek-v4-flash-free`
-- **GUI version format** (user mandate): `v3.xxx + short hash + date` — e.g. `v3.003 26ff2e5 (2026-06-16)`. Implemented via `build.sh` using `go build -ldflags` injecting commit hash + build time. Binary name convention: `opencode2api_vX.XXX` (parsed for version).
+- **v3.031** (2026-06-19): SOCKS5 admin panel 改造 — 保留旧版手动模式(v3.029原样) + 新增 Tor 代理模式切换。纯前端改动(admin/index.html)。Version 不再显示 "dev"（build.sh ldflags 补了 `-X main.buildVersion`）
+- **GUI version format** (user mandate): `v3.xxx + short hash` — e.g. `v3.031 be02a78`. build.sh ldflags: `-X main.buildVersion=v${VERSION} -X main.buildCommit=${COMMIT} -X main.buildTime=${DATE}`
 
 ## Proxy Health Enhancement (2026-06-17)
 - Bad proxy detection: connection timeout/SOCKS5 error → mark bad, no need 429
