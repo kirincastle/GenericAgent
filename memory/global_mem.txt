@@ -46,10 +46,14 @@
 - **Key outputs**: Cache Hit Optimization, SOCKS5 轮询切换 options, v6 node, 429 auto-recovery, Console Log card (in progress via goal mode)
 - **Updated files**: docs/handoff.md, oc2api/docs/handoff-2026-06-17.md, memory/global_mem.txt
 
+## OC2API System SOP (2026-06-19)
+- **L3**: `oc2api_system_sop.md` — 完整系统架构/数据流/429处理链/节点调度/已知坑
+- **v3.029**: cooldown 检查移最前, sync-sub.py 不重启 xray, syncSocks5 放重启后, nodeIPMap reload, 健康检查 120s
+
 ## OC2API Service Ports (2026-06-17)
 - **Project path**: `/home/moclaw/projects/oc2api`
 - **Deploy target**: `jpkbb` (100.127.66.71) via **Tailscale** network
-  - **SSH**: `root@100.127.66.71` (no password, key-based)
+  - **SSH**: `root@100.127.66.71` or `root@jpkbb.20122102.xyz` (key-based)
   - **Binary path**: `/opt/oc2api/`
   - **Config**: `/opt/oc2api/config.json`
   - **Log**: `/tmp/oc2api-v3.1.log`
