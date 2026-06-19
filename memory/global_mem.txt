@@ -205,6 +205,11 @@
   - API Token 自修改 + permission groups
   - GraphQL Analytics for Workers 查询（dimensions/sum 结构）
   - Edgetunnel 代理消耗特征
+
+## Edgetunnel + CF Workers/Pages 综合指南 (2026-06-19)
+- **L3**: `edgetunnel_workers_pages_guide.md`（485 行）
+  - 涵盖 edgetunnel 架构、Worker/Pages 部署、DNS、API 操作、GraphQL、oc2api 集成、配额分析、排坑
+  - 基于跨 3 个会话的实际操作验证（624672 + 320491 + 当前）
 - **xray 侧**: oc2api 通过 `rotateXrayProxy()` 触发 xray 容器旋转
   1. `sync-sub.py` → GET /sub → 拉新订阅
   2. `syncSocks5FromXrayConfig()` → 读取 xray config 的 inbound SOCKS5 端口
