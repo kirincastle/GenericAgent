@@ -5,9 +5,14 @@
 - All skills, tools, improvements committed here
 - Main reserved for stable/release merges
 
-## RTK Integration (2026-06-16)
-- Source: https://github.com/rtk-ai/rtk
-- Files: memory/rtk_integration.py, memory/rtk_tool.py
+## Ponytail — 最小代码阶梯 (2026-06-19)
+- **Source**: https://github.com/DietrichGebert/ponytail
+- **模式**: Always-on 核心规则（吞噬）+ on-demand 子 skills
+- **核心规则**: `memory/ponytail/SKILL.md` → `ponytail_integration.py` 注入 system prompt
+  - 6 阶梯: YAGNI → stdlib → native → deps → 1 line → minimum
+  - 规则: 无不必要抽象/无新依赖/删除>添加
+- **子 skills** (6个，按需 `/`: `../temp/.agents/skills/ponytail*/`): ponytail, audit, debt, gain, help, review
+- **互补**: caveman 压 prose, ponytail 压 code
 - Branch: rtk-integration (long-term)
 - Type: tool integration + hook (auto-inject RTK usage instruction into system prompt)
 - Status: committed on rtk-integration
