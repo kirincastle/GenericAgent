@@ -198,6 +198,13 @@
   - `POST admin/ADD.txt` → 上传自定义 IP 列表
 - **订阅刷新**: 纯 request-driven，**无定时器**。每个 `/sub` 请求都实时从 KV 生成
   - `SUBUpdateTime: 3`（line 4937）只是 Clash 的 `Profile-Update-Interval` header，非 worker 自身刷新
+
+## CF Workers API Operations SOP (2026-06-19)
+- **L3**: `cf_workers_sop.md`
+  - Route: zone-level 非 account-level
+  - API Token 自修改 + permission groups
+  - GraphQL Analytics for Workers 查询（dimensions/sum 结构）
+  - Edgetunnel 代理消耗特征
 - **xray 侧**: oc2api 通过 `rotateXrayProxy()` 触发 xray 容器旋转
   1. `sync-sub.py` → GET /sub → 拉新订阅
   2. `syncSocks5FromXrayConfig()` → 读取 xray config 的 inbound SOCKS5 端口
