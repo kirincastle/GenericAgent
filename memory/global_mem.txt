@@ -22,9 +22,9 @@
 - **节点**: JP/SG/NL/US/GB/DE/FR (KR→NL, TLS cert过期)
 - **连接池最优**: idlePerHost=5, maxIdle=50, timeout=90s → warm 295-485ms (cold 4.7-10.3s)
 - **性能**: GB最快(4.7s cold), DE最慢(10.3s cold), warm ~16x加速
-- **文件**: proip.go, config.json, admin/index.html(热力图), opencode2api.go(/api/proip-stats), cmd/{proip-test,nodemanager,healthcheck,ratelimit,learn429,fallback}/main.go
-- **坑**: file_patch替换`</script>`标签会被吃掉→需手动补回; Python r'''写Go代码时\n变成实际换行→用Python list逐行写
-- **下一步**: 集成真实PROIP数据到handler, go build解决x-tunnel依赖, deploy
+- **文件**: proip.go, config.json, admin/index.html(热力图+PROIP选择), opencode2api.go(/api/proip-stats + AppConfig.Proip + getSocksProxyCount PROIP + 429 MarkUnhealthy + token跟踪), proxy.go(getHTTPClient PROIP分支)
+- **核心集成**: 429自动旋转(PROIP节点标记unhealthy)+Token统计(RateLimitTracker.GetNode().AddUsage) ✅编译通过
+- **坑**: file_patch替换`</script>`标签会被吃掉→需手动补回; Python r\'\'\'写Go代码时\\n变成实际换行→用Python list逐行写; Go多文件package main注意loadConfig/main重名冲突
 
 ## Caveman Compression Skill (2026-06-16)
 - Source: https://github.com/JuliusBrussee/caveman
@@ -77,6 +77,7 @@
   - `8000` = opencode2api **v3** (master branch)
   - `8001` = v4
   - `8005` = v5
+- **auto-backup**: oc2api项目有auto-backup机制, 后台自动commit变更(git status可能显示clean即使有改动)
   - `8006` = v6
 - ⚠️ **ds2api trap**: `/home/moclaw/projects/oc2api` also contains a `ds2api` (old proxy). ds2api uses upstream `https://opencode.ai/zen/go/v1` (returns 19 models, NO -free variants). opencode2api v3 uses upstream `https://opencode.ai/zen/v1/chat/completions` (returns 48 models including -free). If CC fails with "Model not found" for -free models, check that opencode2api (not ds2api) is running on the port.
 - **v3 verified**: master branch (v3.015), built at `/home/moclaw/projects/oc2api`, model_alias configured for `ds→deepseek-v4-flash-free`
