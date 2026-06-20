@@ -5,17 +5,9 @@
 - All skills, tools, improvements committed here
 - Main reserved for stable/release merges
 
-## Ponytail — 最小代码阶梯 (2026-06-19)
-- **Source**: https://github.com/DietrichGebert/ponytail
-- **模式**: Always-on 核心规则（吞噬）+ on-demand 子 skills
-- **核心规则**: `memory/ponytail/SKILL.md` → `ponytail_integration.py` 注入 system prompt
-  - 6 阶梯: YAGNI → stdlib → native → deps → 1 line → minimum
-  - 规则: 无不必要抽象/无新依赖/删除>添加
-- **子 skills** (6个，按需 `/`: `../temp/.agents/skills/ponytail*/`): ponytail, audit, debt, gain, help, review
-- **互补**: caveman 压 prose, ponytail 压 code
-- Branch: rtk-integration (long-term)
-- Type: tool integration + hook (auto-inject RTK usage instruction into system prompt)
-- Status: committed on rtk-integration
+## Ponytail (2026-06-19)
+- Source: github.com/DietrichGebert/ponytail, 6 阶梯规则: YAGNI→stdlib→native→deps→1line→minimum
+- 6 子 skills: `../temp/.agents/skills/ponytail*/`, 互补 caveman(压 prose) + ponytail(压 code)
 
 ## oc2api v4 — PROIP 多节点系统 (2026-06-20)
 - **节点**: JP/SG/NL/US/GB/DE/FR, 域名 `ProxyIP.XX.CMLiussss.net`, 连接池 idlePerHost=5/maxIdle=50/timeout=90s
@@ -23,115 +15,54 @@
 - **核心集成**: 429自动旋转+Token统计+健康检查120s+Admin热力图
 - **坑**: file_patch替换`</script>`标签会被吃掉; Python写Go时\\n变实际换行; Go多文件package main loadConfig冲突
 
-## Caveman Compression Skill (2026-06-16)
-- Source: https://github.com/JuliusBrussee/caveman
-- Files: memory/caveman/SKILL.md, memory/caveman_integration.py
-- Branch: rtk-integration (cherry-picked from caveman-skill)
-- Type: skill + hook (auto-inject SKILL.md into system prompt)
-- Status: committed on rtk-integration
+## Caveman (2026-06-16)
+- Source: github.com/JuliusBrussee/caveman, skill+hook auto-inject, rtk-integration
 
-## Git Remote Config (2026-06-16)
-- User GitHub: kirincastle (verified via SSH)
-- Origin (personal fork): git@github.com:kirincastle/GenericAgent.git
-- Upstream: https://github.com/Lsdefine/GenericAgent.git
-- Auth method: SSH (key at ~/.ssh/)
-- Branch workflow: all changes on rtk-integration → push to own fork
+## Git Remote (2026-06-16)
+- Origin: git@github.com:kirincastle/GenericAgent.git, Upstream: github.com/Lsdefine/GenericAgent
+- Branch: rtk-integration, auth: SSH
 
 ## Cache Hit Optimization (2026-06-17)
-- **Problem**: `_slide_window_history` sends full session each turn → prefix changes → 0% cache hit
-- **Fix**: Added `max_num_turns: 8` in config_loader.json5, .codex-config.json5, frontend-h5 template
-- **Mechanism**: Limits history window to 8 turns → stable prefix → cache hit recovers
-- **Files**: config_loader.json5, .codex-config.json5, frontend-h5 template
-- **2026-06-18 Fix**: `ga_cache.py after_request()` 字段映射修復 — DeepSeek/OpenAI 用 `prompt_tokens_details.cached_tokens` (cache_read)，Anthropic 用 `cache_read_input_tokens` / `cache_creation_input_tokens`。原来是 `cached_tokens` fallback 错误赋给 `ci`(creation) 而非 `cr`(read)，导致 GA Cache 统计显示 0% 命中而实际 Token usage 正常。
+- **Fix**: `max_num_turns: 8` in configs → 稳定 prefix → cache hit 恢复
+- **2026-06-18 Fix**: `ga_cache.py after_request()` 字段映射 — DeepSeek/OpenAI 用 `prompt_tokens_details.cached_tokens`, Anthropic 用 `cache_read_input_tokens`
+- **Deepseek configs**: 4个统一 `max_num_turns:8→80`, `context_win:28000→400000`
 
-## Matt Pocock Skills Integration (2026-06-18)
-- **Source**: https://github.com/mattpocock (17 engineering skills)
-- **Location**: `../temp/.agents/skills/` (18 skill directories)
-- **Files**: memory/mattpocock_integration.py, frontends/tuiapp_v2.py (palette patch)
-- **Type**: index + on-demand loading via agent_before hook
-- **Mechanism**: lightweight index (~2800 chars) injected into system prompt every turn; full SKILL.md loaded only when user activates a skill via `/skillname`
-- **TUI integration**: skills appear in `/` autocomplete palette
-- **Status**: committed on rtk-integration
-- **Record**: `docs/handoff.md` — full session actions + unresolved items
-- **Trigger**: user requested neat cleanup (2nd session)
-- **Key outputs**: Cache Hit Optimization, SOCKS5 轮询切换 options, v6 node, 429 auto-recovery, Console Log card (in progress via goal mode)
-- **Updated files**: docs/handoff.md, oc2api/docs/handoff-2026-06-17.md, memory/global_mem.txt
+## Matt Pocock Skills (2026-06-18)
+- 28 skills in `../temp/.agents/skills/`, on-demand loading via `/skillname`, TUI palette 集成
 
 ## OC2API System SOP (2026-06-19)
-- **L3**: `oc2api_system_sop.md` — 完整系统架构/数据流/429处理链/节点调度/已知坑
-- **v3.029**: cooldown 检查移最前, sync-sub.py 不重启 xray, syncSocks5 放重启后, nodeIPMap reload, 健康检查 120s
-- **SUB_URL**: 设 systemd env var (`systemctl set-environment SUB_URL=...`) + restart oc2api 才生效。token 静态(MD5MD5计算), 不会自动轮转
+- L3: `oc2api_system_sop.md`; v3.029: cooldown移最前, sync-sub.py不重启xray, 健康检查120s
+- SUB_URL: systemd env var + restart 才生效, token 静态(MD5MD5)
 
-## OC2API Service Ports (2026-06-17)
-- **Project path**: `/home/moclaw/projects/oc2api`
-- **Deploy target**: `jpkbb` (100.127.66.71) via **Tailscale** network
-  - **SSH**: `root@100.127.66.71` or `root@jpkbb.20122102.xyz` (key-based)
-  - **Binary path**: `/opt/oc2api/`
-  - **Config**: `/opt/oc2api/config.json`
-  - **Log**: `/tmp/oc2api-v3.1.log`
-  - All oc2api versions deploy here
-- **Port assignments** (user rule):
-  - `8000` = opencode2api **v3** (master branch)
-  - `8001` = v4
-  - `8005` = v5
-- **auto-backup**: oc2api项目有auto-backup机制, 后台自动commit变更(git status可能显示clean即使有改动)
-  - `8006` = v6
-- ⚠️ **ds2api trap**: `/home/moclaw/projects/oc2api` also contains a `ds2api` (old proxy). ds2api uses upstream `https://opencode.ai/zen/go/v1` (returns 19 models, NO -free variants). opencode2api v3 uses upstream `https://opencode.ai/zen/v1/chat/completions` (returns 48 models including -free). If CC fails with "Model not found" for -free models, check that opencode2api (not ds2api) is running on the port.
-- **v3 verified**: master branch (v3.015), built at `/home/moclaw/projects/oc2api`, model_alias configured for `ds→deepseek-v4-flash-free`
-- **v3.031** (2026-06-19): SOCKS5 admin panel 改造 — 保留旧版手动模式(v3.029原样) + 新增 Tor 代理模式切换。纯前端改动(admin/index.html)。Version 不再显示 "dev"（build.sh ldflags 补了 `-X main.buildVersion`）
-- **GUI version format** (user mandate): `v3.xxx + short hash` — e.g. `v3.031 be02a78`. build.sh ldflags: `-X main.buildVersion=v${VERSION} -X main.buildCommit=${COMMIT} -X main.buildTime=${DATE}`
+## OC2API Ports (2026-06-17)
+- Project: `/home/moclaw/projects/oc2api`, Deploy: jpkbb (100.127.66.71) via Tailscale
+- 8000=v3, 8001=v4, 8005=v5, 8006=v6; config: `/opt/oc2api/config.json`; auto-backup: 后台自动commit
+- ds2api trap: ds2api用upstream `opencode.ai/zen/go/v1`(19模型,无-free); v3用`opencode.ai/zen/v1/chat/completions`(48模型含-free)
+- GUI version: `v3.xxx + short hash`, ldflags: `-X main.buildVersion=v${VERSION} -X main.buildCommit=${COMMIT}`
 
-## Proxy Health Enhancement (2026-06-17)
-- Bad proxy detection: connection timeout/SOCKS5 error → mark bad, no need 429
-- 429 triggers rotation to next alive proxy (not just rate-limit config)
-- 50%+ bad → 触发 xray 订阅刷新（宿主机 `/root/xray-proxy/sync-sub.py`，非 container 内 subscription 命令）
-- Recently-429'd alive proxies can be rotated back
-- Subscription refresh **always** runs before cooldown check (every `rotateXrayProxy()` call regardless of cooldown), compiled into binary, persists across upgrades
-- Bugfix: was after cooldown check — high 429 frequency hit cooldown, skipped refresh
-- **Gotcha**: 429 count is per-node (in-memory), NOT per-proxy. Same proxy pool shared by v3/v6 can show 429 on one node but healthy on another.
-- **429 auto-recovery** (v3.013+): `proxy429RecoveryCount` counter, reset on new 429, clear after 3 consecutive healthy probes. Commit `817eb0c`
-- Code: opencode2api.go, deployed v3.009→v3.015
+## Proxy Health (2026-06-17)
+- Bad proxy: timeout/SOCKS5 error → mark bad; 429 → rotate alive proxy
+- 50%+ bad → xray 订阅刷新; 429 auto-recovery: 3次连续健康后恢复
+- **Gotcha**: 429 count per-node 内存, v3/v6 共享 proxy pool
 
-## Build Optimization (2026-06-17)
-- rsync -z instead of scp (compressed, single connection)
-- git push runs in background during build (`&` + `wait`)
-- systemd management (stop/start) instead of kill/restart
-- build.sh does everything: bump → commit → push (bg) → build → rsync → systemd restart
+## Build (2026-06-17)
+- build.sh: bump → commit → push(bg) → build → rsync -z → systemd restart
+- **⚠️ deploy 不碰 config**: 只 rsync binary + version.txt。config.json 在服务器 `/opt/oc2api/config.json`，需手动维护
 
 ## User Preference: Auto-Deploy (2026-06-17)
 - **Rule**: After any code change that compiles, deploy automatically. Never ask "deploy?".
 - **Workflow**: code fix → go build → build.sh deploy PORT → done
 
-## Socks5 Proxy Sync Fix (2026-06-17)
-- **Root cause**: `sync-sub.py` updates xray config only, not oc2api's `socks5Proxies` in memory or `config.json`. Subscription reduces node count → dead port lingers.
-- **Fix**: Added `syncSocks5FromXrayConfig()` — reads `/root/xray-proxy/config.json` inbounds, rebuilds `socks5Proxies`, saves to `config.json`
-- **Integration**: Called from `rotateXrayProxy()` after `sync-sub.py` succeeds (line 572)
-- **Deployed**: v3.012
-
-## UI Toggle Fix (2026-06-17)
-- Per-proxy token stats: expand/collapse toggle button
-- State persists across auto-refresh cycles
-- Deployed in v3.007, verified working
-
-## SOCKS5 轮询切换 Options (2026-06-17)
-- **轮询（自动切换-不包括直连）**: 原轮询切换逻辑，仅轮询 SOCKS5 代理
-- **轮询（自动切换-包括直连）**: 轮询中混入 direct 直连（commit f432da7）
-- **Deployed**: v3.015
+## SOCKS5 (2026-06-17)
+- syncSocks5FromXrayConfig: xray订阅减少节点→清理死端口; 轮询切换含直连选项(v3.015)
 
 ## Console Log Card (v3.027)
 - **Frontend**: auto-refresh 3s, ring buffer 200, HKT timezone display
 - **Backend**: `addLogEntry` + `logPrintf` + in-memory logBuffer + adminLogsHandler
 - **Known bugs**: BUG-1 [P1] scrollTop reset on every poll; BUG-2 [P2] unread badge broken in auto-scroll
 
-## probeModelStatus 优化 (2026-06-18)
-- **问题**: 每 10min 探测全部模型（含 paid）→ 浪费请求 + 日志噪音
-- **优化**: 只探测名字含 "free" 或 "big-pickle" 的模型；也只透传这些 free 模型到下游
-- **Deployed**: v3.024 (oc2api)
-- **相关文件**: opencode2api.go (probeModels / isFreeModel / modelStatusHandler)
-
-## GUI 加载问题诊断教训 (2026-06-18)
-- **症状**: v3.024 部署后管理面板大量 "加载中"
-- **误诊**: 怀疑 JS 语法错误（window.onload 末尾 `({})`）
+## probeModelStatus + GUI (2026-06-18)
+- 只探测 free/big-pickle 模型; v3.024 部署后 GUI "加载中"→ 误诊 window.onload, 实为 JSON parse error
 - **根因**: 后端服务刚重启，模型探测/代理健康尚未完成第一轮循环
 - **教训**: GUI "加载中" → 先检查后端服务状态，非 JS 问题
 
