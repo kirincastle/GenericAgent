@@ -129,63 +129,11 @@
 - **耗时**: ~2h，第 18 轮验证完成
 - **状态**: 所有 5 个 Issue 完成，Master 进入 idle loop（budget_seconds 设 24h，仍在空转）
 
-## oc2api 上游 worker.js 架构 (2026-06-19)
-- **项目位置**: `/home/moclaw/projects/edge_tunnel/worker_v2.1.20260617014121.js`（新版） + CF 上 flat-sunset-c7d9（旧版 2026-06-01）
-- **数据流**:
-  - worker.js KV 存储 `config.json`（HOSTS/UUID/优选IP 等）
-  - `/sub` 端点实时读 KV 生成订阅（vless/trojan/ss 节点）
-  - `POST admin/config.json` → 更新 KV config
-  - `POST admin/ADD.txt` → 上传自定义 IP 列表
-- **订阅刷新**: 纯 request-driven，**无定时器**。每个 `/sub` 请求都实时从 KV 生成
-  - `SUBUpdateTime: 3`（line 4937）只是 Clash 的 `Profile-Update-Interval` header，非 worker 自身刷新
-
-## CF Workers API Operations SOP (2026-06-19)
-- **L3**: `cf_workers_sop.md`
-  - Route: zone-level 非 account-level
-  - API Token 自修改 + permission groups
-  - GraphQL Analytics for Workers 查询（dimensions/sum 结构）
-  - Edgetunnel 代理消耗特征
-
-## Edgetunnel + CF Workers/Pages 综合指南 (2026-06-19)
-- **L3**: `edgetunnel_workers_pages_guide.md`（485 行）
-  - 涵盖 edgetunnel 架构、Worker/Pages 部署、DNS、API 操作、GraphQL、oc2api 集成、配额分析、排坑
-  - 基于跨 3 个会话的实际操作验证（624672 + 320491 + 当前）
-- **xray 侧**: oc2api 通过 `rotateXrayProxy()` 触发 xray 容器旋转
-  1. `sync-sub.py` → GET /sub → 拉新订阅
-  2. `syncSocks5FromXrayConfig()` → 读取 xray config 的 inbound SOCKS5 端口
-  3. `docker exec xray-proxy kill -1 1` → SIGHUP 重载
-- **缺失环节**: rotate 前未调 worker admin 接口改 config → sync-sub.py 拉到的是旧节点
-- **正确 Worker**: `flat-sunset-c7d9`（edgetunnel），非 `xjdjrbfb8`
-  - `cfet.xjdjrbfb8.us.ci` DNS 路由指向 flat-sunset-c7d9
-  - xjdjrbfb8 是独立的 179 行 WebSocket 代理（只有 PROXYIP），不含 /sub/admin
-- **env bindings**:
-  - `ADMIN` = `!B28nIp3dFeMo^!f` (plain_text, admin 页面密码)
-  - `KV` = `d4497b9c10924aa2b017d58967cc3fc8` (kv_namespace, edt2_namespace)
-  - `PROXYIP` = `ProxyIP.CMLiussss.net,ProxyIP.HK.CMLiussss.net,...GB.CMLiussss.net` (8 domains, 2026-06-19 通过 wrangler deploy 添加)
-- **KV config.json** 结构:
-  - `反代.PROXYIP = "auto"`（DNS 自动获取模式）
-  - `反代.SOCKS5`（启用/全局/账号/白名单）
-  - `优选订阅生成`（SUB/SUBNAME/TOKEN/本地IP库）
-  - `订阅转换配置`（SUBAPI/SUBCONFIG/SUBEMOJI）
-  - `CF/HOSTS/UUID/PATH`
-- **wrangler deploy** 是修改 bindings 的可靠方式（手动 multipart CF API 容易格式出错）
-- **v2.1 新版差异**（2026-06-17 vs flat-sunset 的 2026-06-01）:
-  - 特征码字典（动态生成域名组件防逆向）
-  - cnIspCode（运营商分组）
-  - SUBLIST 选项
-  - 请求 UUID 验证
-  - ACL4SSR 订阅转换 URL 更新
-
-## oc2api 手动节点更新方案分析 (2026-06-18)
-- **需求**: oc2api 手动 trigger → 改 worker config → 新订阅 → 新 SOCKS5 → oc2api 接手
-- **所需步骤**: 
-  1. oc2api → POST admin/config.json → worker KV 更新
-  2. sync-sub.py → 拉到新节点
-  3. xray 重载 → 放出新 SOCKS5 端口
-  4. syncSocks5FromXrayConfig() → oc2api 切到新代理
-- **状态**: 待实现（先别code）
-
-## neat-freak SOP 补充 (2026-06-19)
-- `/neat` 完成后必须提供 handoff doc 的 full path
-- Handoff doc 路径: `/home/moclaw/projects/external/genericagent/docs/handoff.md`
-- L2 section `oc2api 上游 worker.js 架构` 已更新：flat-sunset-c7d9/xjdjrbfb8 区分、env bindings、KV config.json、wrangler deploy、v2.1 差异
+## oc2api 上游 worker.js + CF Workers (2026-06-19)
+- **L3**: `cf_workers_sop.md` + `edgetunnel_workers_pages_guide.md`
+- worker.js: KV存config.json, /sub实时生成订阅(request-driven无定时器), POST admin/config.json→更新KV
+- **正确Worker**: flat-sunset-c7d9(edgetunnel), 非xjdjrbfb8(179行WebSocket代理只有PROXYIP)
+- xray侧: sync-sub.py→/sub→拉新→SIGHUP重载; 缺失: rotate前未调worker admin接口
+- env bindings: ADMIN/KV(d4497b9c...)/PROXYIP(8域名); wrangler deploy是修改bindings可靠方式
+- v2.1新: 特征码字典/cnIspCode/SUBLIST/UUID验证
+- **手动节点更新**: oc2api→POST worker config→sync-sub→xray reload→syncSocks5 (待实现)
