@@ -71,3 +71,10 @@ curl -s http://100.127.66.71:8000/api/config | python3 -m json.tool
 - 改时区: `timedatectl set-timezone Asia/Hong_Kong`
 - 原时区: America/New_York (EDT, UTC-5)
 - **Console Log 时间**: 后端用 `time.Now().In(time.FixedZone("HKT", 8*3600)).Format("01-02 15:04:05")` 双重保障
+
+### config.json 同步 (2026-06-20 验证)
+- **build.sh 不复制 config.json** — 只部署 binary + symlink + restart
+- 改了 config.json 后必须**单独同步**: `python3 -c "..."` 写入 或 `scp config.json root@100.127.66.71:/opt/oc2api/config.json`
+- 典型症状: 503 (proipNM==nil) 因远程 config 缺 proip 段
+- **systemctl restart SSH hang** — 分开执行: `systemctl stop oc2api` 然后 `systemctl start oc2api &` 或 `nohup systemctl start oc2api &`
+- 验证: `curl -sf http://100.127.66.71:8000/api/proip-stats` 看节点数据

@@ -129,6 +129,12 @@
 - **耗时**: ~2h，第 18 轮验证完成
 - **状态**: 所有 5 个 Issue 完成，Master 进入 idle loop（budget_seconds 设 24h，仍在空转）
 
+## oc2api PROIP 热力图 (2026-06-20)
+- **v3.035**: admin面板真热力图 — CSS颜色编码方块网格 + JS loadProipHeatmap()
+- 7节点(JP/SG/NL/US/GB/DE/FR)全部healthy, /api/proip-stats返回完整数据
+- 坑: build.sh不复制config.json → 远程proip段缺失 → 503(proipNM==nil)
+- 修复: python3写远程config + systemctl stop/start分离(SSH hang)
+
 ## oc2api 上游 worker.js + CF Workers (2026-06-19)
 - **L3**: `cf_workers_sop.md` + `edgetunnel_workers_pages_guide.md`
 - worker.js: KV存config.json, /sub实时生成订阅(request-driven无定时器), POST admin/config.json→更新KV
