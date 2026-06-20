@@ -17,6 +17,15 @@
 - Type: tool integration + hook (auto-inject RTK usage instruction into system prompt)
 - Status: committed on rtk-integration
 
+## oc2api v4 — PROIP 多节点系统 (2026-06-20)
+- **8/8 issues 完成**: config, PROIPDialer, NodeManager, HealthCheck, RateLimitTracker, 429学习, Admin热力图, Fallback
+- **节点**: JP/SG/NL/US/GB/DE/FR (KR→NL, TLS cert过期)
+- **连接池最优**: idlePerHost=5, maxIdle=50, timeout=90s → warm 295-485ms (cold 4.7-10.3s)
+- **性能**: GB最快(4.7s cold), DE最慢(10.3s cold), warm ~16x加速
+- **文件**: proip.go, config.json, admin/index.html(热力图), opencode2api.go(/api/proip-stats), cmd/{proip-test,nodemanager,healthcheck,ratelimit,learn429,fallback}/main.go
+- **坑**: file_patch替换`</script>`标签会被吃掉→需手动补回; Python r'''写Go代码时\n变成实际换行→用Python list逐行写
+- **下一步**: 集成真实PROIP数据到handler, go build解决x-tunnel依赖, deploy
+
 ## Caveman Compression Skill (2026-06-16)
 - Source: https://github.com/JuliusBrussee/caveman
 - Files: memory/caveman/SKILL.md, memory/caveman_integration.py
