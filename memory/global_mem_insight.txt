@@ -11,3 +11,6 @@ Browser special ops: tmwebdriver_sop(file upload/image search/PDF blob/physical 
 Keyboard & Mouse: ljqCtrl_sop(no pyautogui/activate first) Screenshot/Vision: ocr/vision_sop | No fullscreen capture, prefer window
 Scheduling: scheduled_task_sop | Autonomous: autonomous_operation_sop | watchdog/reflect: agentmain --reflect
 Mobile: adb_ui.py
+
+RULES:
+- file_write截断大文件→"...[Truncated]..."字面写入源码→用Python code_run写完整文件
