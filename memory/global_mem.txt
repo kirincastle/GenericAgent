@@ -18,13 +18,10 @@
 - Status: committed on rtk-integration
 
 ## oc2api v4 — PROIP 多节点系统 (2026-06-20)
-- **8/8 issues 完成**: config, PROIPDialer, NodeManager, HealthCheck, RateLimitTracker, 429学习, Admin热力图, Fallback
-- **节点**: JP/SG/NL/US/GB/DE/FR (KR→NL, TLS cert过期)
-- **连接池最优**: idlePerHost=5, maxIdle=50, timeout=90s → warm 295-485ms (cold 4.7-10.3s)
-- **性能**: GB最快(4.7s cold), DE最慢(10.3s cold), warm ~16x加速
-- **文件**: proip.go, config.json, admin/index.html(热力图+PROIP选择), opencode2api.go(/api/proip-stats + AppConfig.Proip + getSocksProxyCount PROIP + 429 MarkUnhealthy + token跟踪), proxy.go(getHTTPClient PROIP分支)
-- **核心集成**: 429自动旋转(PROIP节点标记unhealthy)+Token统计(RateLimitTracker.GetNode().AddUsage) ✅编译通过
-- **坑**: file_patch替换`</script>`标签会被吃掉→需手动补回; Python r\'\'\'写Go代码时\\n变成实际换行→用Python list逐行写; Go多文件package main注意loadConfig/main重名冲突
+- **节点**: JP/SG/NL/US/GB/DE/FR, 域名 `ProxyIP.XX.CMLiussss.net`, 连接池 idlePerHost=5/maxIdle=50/timeout=90s
+- **v3.034 修复**: getProipClient() DialContext 错误直连目标→改为连 PROIP 代理; TLS SNI 错误→改为 target 域名; adminProipStatsHandler JSON tag 加 snake_case 匹配前端
+- **核心集成**: 429自动旋转+Token统计+健康检查120s+Admin热力图
+- **坑**: file_patch替换`</script>`标签会被吃掉; Python写Go时\\n变实际换行; Go多文件package main loadConfig冲突
 
 ## Caveman Compression Skill (2026-06-16)
 - Source: https://github.com/JuliusBrussee/caveman
@@ -122,13 +119,9 @@
 - **Deployed**: v3.015
 
 ## Console Log Card (v3.027)
-- **Deployed**: v3.016→v3.027 (2026-06-18), 14+ wake cycles.
-- **Frontend**: auto-refresh 3s, color-coded by level, clear button, ring buffer cap 200, auto-scroll toggle (📌 Auto, default OFF), unread badge, retryCount display
-- **Backend**: `addLogEntry(level, component, msg)` + `logPrintf` helper + in-memory logBuffer + adminLogsHandler (GET/DELETE)
-- **Fixes applied (v3.017–v3.027)**: auto-scroll OFF default + state persistence, table-layout, word-break, log-DEBUG CSS class injection, aria-live accessibility, flex-wrap, code cleanup, retryCount, unread badge, HKT timezone display
-- **Known unfixed bugs**: BUG-1 [P1] scrollTop reset on every poll (el.innerHTML); BUG-2 [P2] unread badge broken in auto-scroll mode; B2 race condition
-- **HKT Timezone (v3.027)**: `time.Now().In(time.FixedZone("HKT", 8*3600)).Format("01-02 15:04:05")` in `addLogEntry`
-- **Inspections**: Wake27 (26/26 ✓), Wake30 (4 items). Reports: `temp/wake*/`
+- **Frontend**: auto-refresh 3s, ring buffer 200, HKT timezone display
+- **Backend**: `addLogEntry` + `logPrintf` + in-memory logBuffer + adminLogsHandler
+- **Known bugs**: BUG-1 [P1] scrollTop reset on every poll; BUG-2 [P2] unread badge broken in auto-scroll
 
 ## probeModelStatus 优化 (2026-06-18)
 - **问题**: 每 10min 探测全部模型（含 paid）→ 浪费请求 + 日志噪音
