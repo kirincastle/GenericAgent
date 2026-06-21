@@ -131,8 +131,12 @@
 - **当前部署**: flat-sunset-c7d9.minhquyphan452.workers.dev, DNS: cfet.xjdjrbfb8.us.ci, WRAPPED: proxied
 
 ## Recent (2026-06-21)
-- oc2api PROIP v3.055 running. 页面顺序OK，div平衡OK，热力图30s
-- 待验证: 卡片左右边框对齐(用户需确认)
+- oc2api v3.059 running. 卡片边框对齐OK(用户确认)
+- **v3.057**: PROIP健康检测循环 — `proipHealthCheckLoop()` 从 `initProipStats()` 启动(sync.Once), 每60s测延迟, 数据存 proipRL
+- **v3.058**: Tor统计修复 — `getSocks5Client()` `!found`分支构造 `Socks5Proxy{Addr: activeSocks5}`, `lastActiveProxy="Tor"`
+- **v3.059**: SOCKS5保存修复 — 字段名 `socks5_list→socks5_proxies`, 保存前 `renderSocks5Select()` 刷新下拉框+空值自动选首代理
+- **admin面板模式切换**: `selectMode()` 只做视觉切换, `saveConfig()` 才POST; Tor模式 `active_socks5="127.0.0.1:9050"`; SOCKS5模式需先选中下拉框再保存
+- **已知坑**: admin面板 `socks5_list` vs `socks5_proxies` 字段名不匹配已修; Tor不在socks5Proxies列表里通过`!found`分支处理
 
 ## Handoff
 - 索引: memory/handoffs/index.md
