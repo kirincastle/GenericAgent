@@ -39,3 +39,8 @@ ROI = (不放这几个词的犯错概率 × 代价) / 每轮词数成本
 
 **红线**：记忆修改是持久性伤害，错误每轮复利。L1只能patch词级别修改，禁overwrite
 产生误导应及时修正L1或记忆更名
+
+## Handoff 机制
+/neat结束时生成handoff doc → 更新 `memory/handoffs/index.md` → L2 `## Handoff` 存索引路径
+新session"继续" → 读index.md → 读handoff doc → 继续工作
+任务完成 → 删handoff doc → 更新index.md

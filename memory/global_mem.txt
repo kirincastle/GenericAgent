@@ -118,11 +118,22 @@
 - **耗时**: ~2h，第 18 轮验证完成
 - **状态**: 所有 5 个 Issue 完成，Master 进入 idle loop（budget_seconds 设 24h，仍在空转）
 
-## oc2api 上游 worker.js + CF Workers (2026-06-19)
+## oc2api 上游 worker.js + CF Workers (2026-06-21)
 - **L3**: `cf_workers_sop.md` + `edgetunnel_workers_pages_guide.md`
 - worker.js: KV存config.json, /sub实时生成订阅(request-driven无定时器), POST admin/config.json→更新KV
-- **正确Worker**: flat-sunset-c7d9(edgetunnel), 非xjdjrbfb8(179行WebSocket代理只有PROXYIP)
+- **正确Worker**: flat-sunset-c7d9(edgetunnel), 非xjdjfb8(179行WebSocket代理只有PROXYIP)
 - xray侧: sync-sub.py→/sub→拉新→SIGHUP重载; 缺失: rotate前未调worker admin接口
 - env bindings: ADMIN/KV(d4497b9c...)/PROXYIP(8域名); wrangler deploy是修改bindings可靠方式
 - v2.1新: 特征码字典/cnIspCode/SUBLIST/UUID验证
 - **手动节点更新**: oc2api→POST worker config→sync-sub→xray reload→syncSocks5 (待实现)
+- **deploy前必问**: admin密码、UUID、自定义域名(随机4-6字母+xjdjrbfb8.us.ci)
+- **deploy用wrangler**: CF API multipart报`Unexpected token 'export'`，wrangler一次过
+- **当前部署**: flat-sunset-c7d9.minhquyphan452.workers.dev, DNS: cfet.xjdjrbfb8.us.ci, WRAPPED: proxied
+
+## Recent (2026-06-21)
+- oc2api PROIP v3.055 running. 页面顺序OK，div平衡OK，热力图30s
+- 待验证: 卡片左右边框对齐(用户需确认)
+
+## Handoff
+- 索引: memory/handoffs/index.md
+- 文档: memory/handoffs/*.md
