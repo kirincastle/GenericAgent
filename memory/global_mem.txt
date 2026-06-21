@@ -13,6 +13,7 @@
 - **节点**: JP/SG/NL/US/GB/DE/FR, 域名 `ProxyIP.XX.CMLiussss.net`, 连接池 idlePerHost=5/maxIdle=50/timeout=90s
 - **v3.034 修复**: getProipClient() DialContext 错误直连目标→改为连 PROIP 代理; TLS SNI 错误→改为 target 域名; adminProipStatsHandler JSON tag 加 snake_case 匹配前端
 - **核心集成**: 429自动旋转+Token统计+健康检查120s+Admin热力图
+- **v3.040 GUI redesign**: admin面板改为卡片网格模式选择(直连/SOCKS5/代理组/Tor/PROIP)，点击卡片展开配置区，替代原散落的下拉+radio切换
 - **坑**: file_patch替换`</script>`标签会被吃掉; Python写Go时\\n变实际换行; Go多文件package main loadConfig冲突
 
 ## Caveman (2026-06-16)
@@ -116,15 +117,6 @@
 - **产出**: 14 commits（7 master + 4 worker + 其他），含 ssh.go/backup.go/customcli.go/customcli_stream.go/customcli_sessions.go/models.go/web/server.go
 - **耗时**: ~2h，第 18 轮验证完成
 - **状态**: 所有 5 个 Issue 完成，Master 进入 idle loop（budget_seconds 设 24h，仍在空转）
-
-## oc2api PROIP 热力图 (2026-06-20)
-- **v3.035**: admin面板真热力图 — CSS颜色编码方块网格 + JS loadProipHeatmap()
-- 7节点(JP/SG/NL/US/GB/DE/FR)全部healthy, /api/proip-stats返回完整数据
-- 坑: build.sh不复制config.json → 远程proip段缺失 → 503(proipNM==nil)
-- 修复: python3写远程config + systemctl stop/start分离(SSH hang)
-- **v3.037修复(2026-06-21)**: lastActiveProxy初始为空→getProipClient不设置node ID→stats记录为0。去掉条件判断，始终设置。远程config proip段仍需python3手动写入(saveConfig on startup不覆盖已存在的proip段)
-- **v3.039修复**: 1)stats handler用snap.Last429Tokens错→改用proipThreshold429 2)Next()加429触发跳过+5min cooldown恢复 3)ProipConfig.Threshold429字段+全局var
-- **PROIP域名大小写敏感(2026-06-21)**: PROIP DNS要求混合大小写(如`PrOxYIp.JP.CmLiUsSsS.nEt`)，全小写不解析。config被覆盖成全小写→所有节点dead。正确域名在git history config.json中。
 
 ## oc2api 上游 worker.js + CF Workers (2026-06-19)
 - **L3**: `cf_workers_sop.md` + `edgetunnel_workers_pages_guide.md`
