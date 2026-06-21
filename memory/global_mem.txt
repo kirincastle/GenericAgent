@@ -134,6 +134,7 @@
 - 7节点(JP/SG/NL/US/GB/DE/FR)全部healthy, /api/proip-stats返回完整数据
 - 坑: build.sh不复制config.json → 远程proip段缺失 → 503(proipNM==nil)
 - 修复: python3写远程config + systemctl stop/start分离(SSH hang)
+- **v3.037修复(2026-06-21)**: lastActiveProxy初始为空→getProipClient不设置node ID→stats记录为0。去掉条件判断，始终设置。远程config proip段仍需python3手动写入(saveConfig on startup不覆盖已存在的proip段)
 
 ## oc2api 上游 worker.js + CF Workers (2026-06-19)
 - **L3**: `cf_workers_sop.md` + `edgetunnel_workers_pages_guide.md`
