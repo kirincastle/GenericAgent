@@ -136,6 +136,7 @@
 - 修复: python3写远程config + systemctl stop/start分离(SSH hang)
 - **v3.037修复(2026-06-21)**: lastActiveProxy初始为空→getProipClient不设置node ID→stats记录为0。去掉条件判断，始终设置。远程config proip段仍需python3手动写入(saveConfig on startup不覆盖已存在的proip段)
 - **v3.039修复**: 1)stats handler用snap.Last429Tokens错→改用proipThreshold429 2)Next()加429触发跳过+5min cooldown恢复 3)ProipConfig.Threshold429字段+全局var
+- **PROIP域名大小写敏感(2026-06-21)**: PROIP DNS要求混合大小写(如`PrOxYIp.JP.CmLiUsSsS.nEt`)，全小写不解析。config被覆盖成全小写→所有节点dead。正确域名在git history config.json中。
 
 ## oc2api 上游 worker.js + CF Workers (2026-06-19)
 - **L3**: `cf_workers_sop.md` + `edgetunnel_workers_pages_guide.md`
