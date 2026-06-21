@@ -26,6 +26,7 @@
 - **Fix**: `max_num_turns: 8` in configs → 稳定 prefix → cache hit 恢复
 - **2026-06-18 Fix**: `ga_cache.py after_request()` 字段映射 — DeepSeek/OpenAI 用 `prompt_tokens_details.cached_tokens`, Anthropic 用 `cache_read_input_tokens`
 - **Deepseek configs**: 4个统一 `max_num_turns:8→80`, `context_win:28000→400000`
+- **效果**: 长对话缓存命中率 30-40% → 98%+（context_win太小→截断→缓存失效）
 
 ## Matt Pocock Skills (2026-06-18)
 - 28 skills in `../temp/.agents/skills/`, on-demand loading via `/skillname`, TUI palette 集成
@@ -76,22 +77,9 @@
 - **缓存**: `temp/model_registry_cache.json`，24h 过期
 
 ## jpkbb 服务器 timezone → HKT (2026-06-18)
-
-## 多机同步方案 (2026-06-18)
-- **代码+记忆**: 通过 git 跨机同步，`ga_sync.sh` 一键操作
-- **会话**: 每机独立，通过 neat-freak 蒸馏到 L2 共享，可选 rsync/云盘同步
-- **秘钥**: mykey.py + ~/.ssh/ 每机独立部署，git 不跟踪
-- **ga_sync.sh**: 支持 pull/push/status/auto 四模式
-- **原时区**: `America/New_York` (EDT, UTC-5)
-- **改后**: `Asia/Hong_Kong` (HKT, UTC+8)
-- **命令**: `timedatectl set-timezone Asia/Hong_Kong`
-- **验证**: `timedatectl` → Local time: `2026-06-18 10:37:14 HKT`
-- **Console Log 时间**: 服务重启后日志时间自动使用系统 HKT，但代码层也加了 `time.FixedZone("HKT", 8*3600)` 双重保障
-
-## Cache Hit Fix — deepseek configs (2026-06-18)
-- **Problem**: 4 deepseek 配置不统一，部分 context_win 太小 → 长对话截断 → 缓存失效
-- **Fix**: 4 个 deepseek 配置统一 `max_num_turns:8→80`，`context_win:28000→400000`
-- **预期**: 长对话缓存命中率 30-40% → 98%+
+- 原时区: `America/New_York` (EDT, UTC-5); 改后: `Asia/Hong_Kong` (HKT, UTC+8)
+- **命令**: `timedatectl set-timezone Asia/Hong_Kong`; 验证: `timedatectl` → Local time HKT
+- **Console Log 时间**: 服务重启后日志时间自动使用系统 HKT，代码层也加了 `time.FixedZone("HKT", 8*3600)` 双重保障
 
 ## Headroom Morphling — ga_cache (2026-06-18)
 - **Source**: headroom v0.26.0 (chopratejas/headroom), Apache 2.0
