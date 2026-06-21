@@ -73,8 +73,16 @@ curl -s http://100.127.66.71:8000/api/config | python3 -m json.tool
 - **Console Log 时间**: 后端用 `time.Now().In(time.FixedZone("HKT", 8*3600)).Format("01-02 15:04:05")` 双重保障
 
 ### config.json 同步 (2026-06-21)
-- **build.sh 现已部署 config.json + admin/** — deploy时自动rsync到远程
-- 部署内容: binary + version.txt + config.json + admin/ 目录
-- 改了 config.json 或 admin/index.html 后 `bash build.sh deploy 8000` 即可自动同步
+- **build.sh 只部署 admin/，不部署 config.json** — deploy时自动rsync admin/到远程
+- 部署内容: binary + version.txt + admin/ 目录
+- ⚠️ **远程config.json是真相源** — GUI保存会修改远程config，本地config.json可能过时
+- 如需手动同步proip节点到远程: SSH直接merge，不要用build.sh覆盖
 - 验证: `curl -sf http://100.127.66.71:8000/api/proip-stats` 看节点数据
-- ⚠️ **远程config.json是真相源** — GUI保存会修改远程config，本地config.json可能过时。部署前确认本地config.json是想要的版本
+
+### admin/index.html 重排section注意事项 (2026-06-21)
+- **重排后必须验证div平衡**: `content.count('<div') == content.count('</div>')`
+- **section移动时确保整个div块完整移动** — 注释+div都要一起，不能只移动注释
+- **从card内部拆分sub-section**: 需计算opens/closes差异，补/删多余的`</div>`
+- **热力图setInterval不要低于30s** — 5s会overwhelm浏览器
+- PROIP节点ID是2字母大写(SG/DE/FR等)，modeOf需匹配`/^[A-Z]{2}$/`
+- proip-stats API用`status`字段(值为"healthy"/"dead")，不是`healthy`布尔值
