@@ -3,7 +3,7 @@ Read L2 or ls ../memory/ for L3 when needed
 L0(META-SOP): memory_management_sop
 L2: oc2api ports | oc2api_system_sop | rtk | caveman | git config | cache_hit_opt | socks5_poll | console_log_card | jpkbb_timezone(hkt) | probeModelStatus | model_registry | recovery_sop | codegraph取代graphify | Hive Master移植 | worker.js架构 | 手动节点更新方案 | cf_workers_sop | edgetunnel_workers_pages_guide(**deploy前必问**密码/域名/UUID, **用wrangler**不用API multipart) | ponytail | **oc2api PROIP多节点+健康检测+Tor统计(v3.059)
 L3: memory_cleanup_sop | skill_search | ui_detect.py | ocr_utils.py | subagent | web_setup_sop | plan_sop 
-| procmem_scanner | keychain | ljqCtrl_sop+.py | tmwebdriver_sop | autonomous_operation_sop | scheduled_task_sop | vision_sop | adb_ui.py | neat-freak(trigger: 同步一下/整理文档/收尾) | rtk_integration.py | rtk_tool.py | caveman | caveman_integration | ponytail | ponytail_integration | oc2api_deploy_sop | model_registry | recovery_sop(trigger: 恢复GA/新机恢复/换电脑了) | mattpocock_integration | cloudflare_skills | limit_aware_loop_integration | oc2api_system_sop | const_sop
+| procmem_scanner | keychain | ljqCtrl_sop+.py | tmwebdriver_sop | autonomous_operation_sop | scheduled_task_sop | vision_sop | adb_ui.py | neat-freak(trigger: 同步一下/整理文档/收尾) | rtk_integration.py | rtk_tool.py | caveman | caveman_integration | ponytail | ponytail_integration | oc2api_deploy_sop | model_registry | recovery_sop(trigger: 恢复GA/新机恢复/换电脑了) | mattpocock_integration | cloudflare_skills | limit_aware_loop_integration | oc2api_system_sop | const_sop | learn_eval_sop(auto-extract: 自动提取模式/技巧保存到记忆)
 L4: L4_raw_sessions/ historical sessions → archives/L4_raw_sessions/ (moved for size)
 Docs: vue3_component_guide.md | code_review_principles.md (graduated to docs/)
 
@@ -16,3 +16,4 @@ RULES:
 - file_write截断大文件→"...[Truncated]..."字面写入源码→用Python code_run写完整文件
 - /neat结束时: 生成handoff doc → 更新memory/handoffs/index.md
 - "继续"/"继续上次" → 读memory/handoffs/index.md找active handoff → 读对应doc
+- **自动模式提取**: 对话中检测到可复用模式（调试技巧/错误解法/项目规律）→ 自动触发 learn_eval_sop 评估保存，无需命令
