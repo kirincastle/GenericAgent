@@ -50,6 +50,8 @@
 ## Build (2026-06-17)
 - build.sh: bump → commit → push(bg) → build → rsync -z → systemd restart
 - **⚠️ deploy 不碰 config**: 只 rsync binary + version.txt。config.json 在服务器 `/opt/oc2api/config.json`，需手动维护
+- **⚠️ deploy target**: systemd ExecStart=`/opt/oc2api/opencode2api`(软链→`opencode2api_v3.065`), 别复制到 `oc2api`(独立文件不是systemd使用的)
+- **JPKBB SSH 易挂**: 大管道/多命令 SSH 易超时。用 `timeout 10 ssh -o ConnectTimeout=5` + 短命令。禁内联复杂 Python。
 
 ## User Preference: Auto-Deploy (2026-06-17)
 - **Rule**: After any code change that compiles, deploy automatically. Never ask "deploy?".
