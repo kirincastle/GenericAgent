@@ -33,8 +33,18 @@ build.sh 自动做：
 ```bash
 # 检查 GUI 版本显示
 curl -s http://100.127.66.71:8000/api/config | python3 -m json.tool
-# 预期: build_version = v3.xxx, build_commit = short hash, build_time = 当天日期
+# 预期: build_version = v3.xxx, build_commit = short hash(如 a1b2c3d), build_time = 当天日期
+# ⚠️ build_commit 不能为空！若为空 → ldflags 未正确注入，检查 build.sh 的 -X main.buildCommit=${COMMIT}
 ```
+
+### 4. Deploy 总结（必须报告）
+部署完成后，输出版本摘要：
+```
+v3.xxx a1b2c3d (2026-06-22)
+```
+格式：`v{major}.{patch} {short_hash} ({date})`
+- 从 `build_version` + `build_commit` + `build_time` 拼接
+- 此摘要记录到 `global_mem.txt` 的 `## Recent` 节
 
 ## 禁止事项
 - ❌ 不要手动改 version.txt

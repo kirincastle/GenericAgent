@@ -40,7 +40,7 @@
 - Project: `/home/moclaw/projects/oc2api`, Deploy: jpkbb (100.127.66.71) via Tailscale
 - 8000=v3, 8001=v4, 8005=v5, 8006=v6; config: `/opt/oc2api/config.json`; auto-backup: 后台自动commit
 - ds2api trap: ds2api用upstream `opencode.ai/zen/go/v1`(19模型,无-free); v3用`opencode.ai/zen/v1/chat/completions`(48模型含-free)
-- GUI version: `v3.xxx + short hash`, ldflags: `-X main.buildVersion=v${VERSION} -X main.buildCommit=${COMMIT}`
+- GUI version: `v3.xxx + short_hash + (date)`, ldflags: `-X main.buildVersion=v${VERSION} -X main.buildCommit=${COMMIT} -X main.buildTime=${DATE}`
 
 ## Proxy Health (2026-06-17)
 - Bad proxy: timeout/SOCKS5 error → mark bad; 429 → rotate alive proxy
@@ -143,3 +143,6 @@
 ## Handoff
 - 索引: memory/handoffs/index.md
 - 文档: memory/handoffs/*.md
+
+## Recent
+- **2026-06-22**: oc2api **v3.066 c46693e (2026-06-22)** — 修复 build_commit 为空问题; proxy.go: ip-api.com + ipinfo.io 双服务 fallback（出口IP探测）; admin Token统计高亮改用 `proxy_last_active`（兼容所有代理模式）
