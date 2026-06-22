@@ -47,10 +47,12 @@ v3.xxx a1b2c3d (2026-06-22)
 - 此摘要记录到 `global_mem.txt` 的 `## Recent` 节
 
 ## 禁止事项
-- ❌ 不要手动改 version.txt
-- ❌ 不要手动 git add/commit/push（build.sh 代劳）
-- ❌ 不要手动上传二进制或手动操作进程（用 build.sh deploy）
-- ❌ 不要 deploy 到 localhost 或其他地址
+- ❌ **不要手动 `go build` + scp** — 会跳过 version bump 和 ldflags hash 注入，导致 `build_commit=""`、版本号不更新
+- ❌ **不要手动改 version.txt**
+- ❌ **不要手动 git add/commit/push**（build.sh 代劳）
+- ❌ **不要手动上传二进制或手动操作进程（用 build.sh deploy）**
+- ❌ **不要 deploy 到 localhost 或其他地址**
+- ❌ **admin/index.html 是 embedded 的** — 改完跑 build.sh deploy，不要单独 scp（没用）
 
 ## 版本号规则
 - 格式: `v{major}.{patch}`，如 `v3.004`

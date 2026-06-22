@@ -53,6 +53,12 @@
 - **⚠️ deploy target**: systemd ExecStart=`/opt/oc2api/opencode2api`(软链→`opencode2api_v3.065`), 别复制到 `oc2api`(独立文件不是systemd使用的)
 - **JPKBB SSH 易挂**: 大管道/多命令 SSH 易超时。用 `timeout 10 ssh -o ConnectTimeout=5` + 短命令。禁内联复杂 Python。
 
+## Deploy Lessons (2026-06-22)
+|- **必须用 `build.sh deploy`** — 手动 `go build` + scp 跳过了 version bump 和 ldflags hash 注入，导致 `build_commit=""`
+|- **oc2api 是 single binary `//go:embed admin/index.html`** — 前端 HTML 改动必须 rebuild，不能单独 scp
+|- **每次 deploy 产出要记到 `## Recent`**: `v3.xxx a1b2c3d (2026-06-22)`
+|- 参考: oc2api_deploy_sop.md
+
 ## User Preference: Auto-Deploy (2026-06-17)
 - **Rule**: After any code change that compiles, deploy automatically. Never ask "deploy?".
 - **Workflow**: code fix → go build → build.sh deploy PORT → done
@@ -132,17 +138,12 @@
 - **deploy用wrangler**: CF API multipart报`Unexpected token 'export'`，wrangler一次过
 - **当前部署**: flat-sunset-c7d9.minhquyphan452.workers.dev, DNS: cfet.xjdjrbfb8.us.ci, WRAPPED: proxied
 
-## Recent (2026-06-21)
-- oc2api v3.059 running. 卡片边框对齐OK(用户确认)
-- **v3.057**: PROIP健康检测循环 — `proipHealthCheckLoop()` 从 `initProipStats()` 启动(sync.Once), 每60s测延迟, 数据存 proipRL
-- **v3.058**: Tor统计修复 — `getSocks5Client()` `!found`分支构造 `Socks5Proxy{Addr: activeSocks5}`, `lastActiveProxy="Tor"`
-- **v3.059**: SOCKS5保存修复 — 字段名 `socks5_list→socks5_proxies`, 保存前 `renderSocks5Select()` 刷新下拉框+空值自动选首代理
-- **admin面板模式切换**: `selectMode()` 只做视觉切换, `saveConfig()` 才POST; Tor模式 `active_socks5="127.0.0.1:9050"`; SOCKS5模式需先选中下拉框再保存
-- **已知坑**: admin面板 `socks5_list` vs `socks5_proxies` 字段名不匹配已修; Tor不在socks5Proxies列表里通过`!found`分支处理
 
 ## Handoff
 - 索引: memory/handoffs/index.md
 - 文档: memory/handoffs/*.md
 
 ## Recent
-- **2026-06-22**: oc2api **v3.066 c46693e (2026-06-22)** — 修复 build_commit 为空问题; proxy.go: ip-api.com + ipinfo.io 双服务 fallback（出口IP探测）; admin Token统计高亮改用 `proxy_last_active`（兼容所有代理模式）
+|- **2026-06-22**: oc2api **v3.067 f61e2af (2026-06-22)** — build_commit 修复; 出口IP ipinfo.io fallback; Token高亮用 proxy_last_active（兼容所有代理模式）
+|- **2026-06-22**: oc2api **v3.066 c46693e (2026-06-22)** — (未bump版本的手动部署，已废弃)
+|- **2026-06-21**: oc2api v3.059 卡片边框对齐OK; v3.057 PROIP健康检测循环; v3.058 Tor统计修复; v3.059 SOCKS5保存修复; admin面板模式切换
