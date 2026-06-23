@@ -155,6 +155,7 @@
 - **报路径规则**: 所有 file path 必须给 full path，不用相对路径或缩写。用户特地强调，牢记
 - **文档存放规则**: 文档放到**对应项目目录**的 `output/<topic>/` 子文件夹，如 `projects/migration-dashboard/output/custom-cli/`
 - **文件命名规则**: `<project>_<description>_<YYYYMMDD>_v<version>.<ext>`，如 `migration-dashboard_custom-cli-optimization-plan_20260623_v1.md`
+- **版本迭代**: 每版必须独立文件（不原地 patch 已有版本）。v3 → v3.1 要新建 `..._v3.1.md`
 
 
 ## Handoff

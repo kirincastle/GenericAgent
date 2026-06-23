@@ -27,15 +27,23 @@ build.sh 自动做：
 1. **bump version** — version.txt 中 patch +1（v3.003 → v3.004）
 2. **git commit + push** — 包含所有改动，commit message 含版本号
 3. **build** — Go 编译，注入 commit hash + date
-4. **deploy** — rsync -z 上传 → systemd stop → symlink update → systemd start → health check
+4. **deploy** — rsync -z 上传 binary + version.txt + admin/ → systemd stop → symlink update → systemd start → health check
 
 ### 3. 验证
 ```bash
-# 检查 GUI 版本显示
-curl -s http://100.127.66.71:8000/api/config | python3 -m json.tool
-# 预期: build_version = v3.xxx, build_commit = short hash(如 a1b2c3d), build_time = 当天日期
+# Admin API 现在有 Basic Auth 保护，验证需使用 /health 端点或带认证
+# 方式 A（无需认证）:
+curl -s http://100.127.66.71:8000/health
+# 方式 B（管理员面板，需 ADMIN_USER/ADMIN_PASS）:
+curl -u "$ADMIN_USER:$ADMIN_PASS" http://100.127.66.71:8000/api/config | python3 -m json.tool
+# 预期输出: build_version = v3.xxx, build_commit = short hash(如 a1b2c3d), build_time = 当天日期
 # ⚠️ build_commit 不能为空！若为空 → ldflags 未正确注入，检查 build.sh 的 -X main.buildCommit=${COMMIT}
 ```
+
+### 4. 前置配置
+- 目标服务器需预先设置 `ADMIN_USER`/`ADMIN_PASS` 环境变量（用于 admin API 认证）
+- 若 `ADMIN_USER` 为空则不启用认证（向后兼容）
+- ⚠ 设置 `ADMIN_PASS` 但未设 `ADMIN_USER` 时认证被跳过（日志会警告）
 
 ### 4. Deploy 总结（必须报告）
 部署完成后，输出版本摘要：
