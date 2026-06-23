@@ -5,6 +5,11 @@
 - All skills, tools, improvements committed here
 - Main reserved for stable/release merges
 
+## Project Abbreviations & Rules (2026-06-23)
+- **md** = migration-dashboard | **mccg** = mac-change-check-go | **rff** = route-finder-firewall
+- **报版本格式**: `vX.Y.Z (shorthash, YYYY-MM-DD)` — user pref
+- **auto-backup 规则**: 无 code change 时不得 bump version（当前 auto-backup 脚本每次提交都会 +1~2 版本号，即使仅 auto-sync 无代码变更 —— 需修复）
+
 ## Ponytail (2026-06-19)
 - Source: github.com/DietrichGebert/ponytail, 6 阶梯规则: YAGNI→stdlib→native→deps→1line→minimum
 - 6 子 skills: `../temp/.agents/skills/ponytail*/`, 互补 caveman(压 prose) + ponytail(压 code)
