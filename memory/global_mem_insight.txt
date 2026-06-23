@@ -22,7 +22,9 @@ GA Commands: /goal /hive /conductor /morphling /supervisor /plan /incubator /rec
 ## 行为规则（每轮激活）
 **Lessons 自动匹配**：本会话内，每次用户给非闲聊请求，自动提取关键词，运行 `bash ../memory/lessons_search.sh <关键词>`，将匹配的 `rule` 注入工作记忆。不依赖任何特定模式。
 - **"继续"/"继续上次"** → 立即读 Handoffs: handoffs/index.md，找到 `### Active` 下所有 handoff doc
-  - 如果只有 1 条 → 自动继续任务
-  - 如果有 ≥2 条 → 列出所有，问用户想继续哪个
+  - 按 session_topic 分组展示给用户（如 `[lessons]`, `[oc2api]`, `[migration]`）
+  - 用户选择一个或多个 topic 继续
+  - 选中后调用 `handoffs_maintenance.mark_progress()` 将对应 handoff 标记为 `in_progress`
+  - `/neat` 时检查 `in_progress` handoff → 问用户是否完成 → 完成则 supersede，否则回 active
 - **报路径必给 full path** — 所有文件路径写绝对路径 `/home/moclaw/...`，不缩写
 - **代码变更后 summary 必报 version + short_hash** — vX.XXX + commit-hash + deploy 状态
