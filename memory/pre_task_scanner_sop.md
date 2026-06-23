@@ -18,7 +18,18 @@ intent: "用户给任务后，自动提取关键词搜 memory/ SOP，提前加�
 - "改 git 配置" → `git config`
 - "查 oc2api 节点" → `oc2api node`
 
-### 3. 搜索
+### 2.5. Lessons 匹配（行为矫正）
+在搜 SOP 的同时，用相同关键词匹配 `memory/lessons.jsonl`：
+```bash
+bash ../memory/lessons_search.sh <关键词>
+```
+- 如果命中 lessons → 把 `rule` 字段注入**当前工作记忆**作为行为约束
+- 同一 lesson 在本会话已触发过 → 跳过（防重复注入）
+- 注入格式: `[LESSON] <rule>`
+
+## 并行搜索
+
+### 3. SOP 搜索
 ```bash
 bash ../memory/sop_search.sh <关键词>
 # 或
