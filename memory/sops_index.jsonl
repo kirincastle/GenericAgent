@@ -1,0 +1,38 @@
+{"name": "autonomous_operation", "tags": ["ga-mode, autonomous, automation"], "intent": "⚠️ 路径警告：autonomous_reports 在 temp/ 下，用`./autonomous_reports/`访问，不是`../memory/autonomous_reports/`或`../autonomous_reports", "file": "autonomous_operation_sop.md", "type": "sop"}
+{"name": "cf_workers", "tags": ["cloudflare, workers, deploy"], "intent": "- Account-level `POST /accounts/:id/workers/scripts/:name/routes` → 405 Method Not Allowed", "file": "cf_workers_sop.md", "type": "sop"}
+{"name": "checklist", "tags": ["ga-mode, checklist, quality"], "intent": "清单执行模式：单人、master 自执行，逐项验证不跳步。适用于质量门、多步流程、验证清单。", "file": "checklist_sop.md", "type": "sop"}
+{"name": "choose_mode", "tags": ["ga-mode, choose, workflow"], "intent": "分析任务特征 → 推荐执行模式(Gaal/Hive/Conductor/直接) → 用户确认 → 自动启动", "file": "choose_mode_sop.md", "type": "sop"}
+{"name": "code_review", "tags": ["ga-mode, code, review, quality"], "intent": "Code Review Quality Ga-Mode SOP for GA system", "file": "code_review_sop.md", "type": "sop"}
+{"name": "computer_use", "tags": ["vision, computer-use, automation"], "intent": "Human overview → docs/computer-usage.md | Agent SOP: ui_detect + ljqCtrl 集成", "file": "computer_use.md", "type": "sop"}
+{"name": "const", "tags": ["discipline, rules"], "intent": "用户自定义行为规则，与 Constitution 互补，冲突时用户规则优先。", "file": "const_sop.md", "type": "sop"}
+{"name": "edgetunnel_workers_pages_guide", "tags": ["cloudflare, edgetunnel, deploy, guide"], "intent": "Edgetunnel + CF Workers/Pages 全流程部署与运维指南。部署前必问：密码、域名、UUID，用 wrangler 不用 API multipart。", "file": "edgetunnel_workers_pages_guide.md", "type": "sop"}
+{"name": "github_contribution", "tags": ["git, github, contribution"], "intent": "触发：需要给开源项目提 PR（修 bug / 加功能 / 改文档）| 禁用：仅读代码、不需要提交变更时", "file": "github_contribution_sop.md", "type": "sop"}
+{"name": "gnhf", "tags": ["skill, iteration, loop"], "intent": "需要 agent 无人值守地持续迭代一个目标，每次迭代 commit，失败自动回滚。", "file": "gnhf_sop.md", "type": "sop"}
+{"name": "goal_hive_master_duty", "tags": ["ga-mode, hive, master, parallel"], "intent": "Master 是 Hive 的总体设计部：不亲自生产子任务产物，只负责拆解子任务、判断、汇总，靠调度 worker 把核心交付物在给定时间内稳定推向用户满意。Master 无权停止自己，不得设计自停条件。", "file": "goal_hive_master_duty.md", "type": "sop"}
+{"name": "goal_hive", "tags": ["ga-mode, hive, parallel"], "intent": "Goal Hive = Goal Mode 的多 worker 协作协议", "file": "goal_hive_sop.md", "type": "sop"}
+{"name": "goal_mode", "tags": ["ga-mode, goal, persistent"], "intent": "用户给出开放目标 + 时间预算（如\"花3小时持续优化X\"、\"没事也找事干\"），且不是一次性闭环任务。", "file": "goal_mode_sop.md", "type": "sop"}
+{"name": "incubator", "tags": ["ga-mode, deploy, remote"], "intent": "自我复制到任意节点的agent网络。每个节点有独立记忆，可以通过编辑memory干预它们的行为", "file": "incubator_sop.md", "type": "sop"}
+{"name": "lavish_skill", "tags": ["skill, html, editor"], "intent": "agent 生成了复杂的 HTML 产物，需要精确反馈（框选元素/选中文本）。", "file": "lavish_skill.md", "type": "sop"}
+{"name": "learn_eval", "tags": ["learning, automation, memory"], "intent": "从对话中自动检测可复用模式 → 5维质量评分 → 存入 GA 记忆体系。无需用户命令，agent 自主触发。", "file": "learn_eval_sop.md", "type": "sop"}
+{"name": "ljqCtrl", "tags": ["mobile, keyboard, mouse"], "intent": "- `ljqCtrl.dpi_scale`: float (缩放系数 = 逻辑宽度 / 物理宽度)", "file": "ljqCtrl_sop.md", "type": "sop"}
+{"name": "memory_cleanup", "tags": ["memory, cleanup, maintenance"], "intent": "LLM自身是压缩器+解码器。L1只需让它意识到某类知识存在，它就能通过tool call自行取用深层内容。", "file": "memory_cleanup_sop.md", "type": "sop"}
+{"name": "memory_management", "tags": ["memory, meta, core"], "intent": "Defines the L0-L4 memory hierarchy, writing rules, and knowledge distillation pipeline. Highest priority SOP.", "file": "memory_management_sop.md", "type": "meta-sop"}
+{"name": "morphling", "tags": ["ga-mode, morphling"], "intent": "Morphling 是一种项目级能力吸收/替代模式：给定任意目标项目，先抽取其目标与测例，再按组件选择调用、重写或少量复刻禁区规避，最终让自身或新产物在同一测例上达到或超过目标。", "file": "morphling_sop.md", "type": "sop"}
+{"name": "no_mistakes", "tags": ["git, quality, discipline"], "intent": "需要保证推送到关键分支的代码经过 AI review → 测试 → lint → CI 全流程验证。", "file": "no_mistakes_sop.md", "type": "sop"}
+{"name": "oc2api_deploy", "tags": ["oc2api, deploy"], "intent": "所有 oc2api 的改动，最后一步必须运行 `bash build.sh deploy <port>`，不得手动分离步骤。", "file": "oc2api_deploy_sop.md", "type": "sop"}
+{"name": "oc2api_system", "tags": ["oc2api, system, xray"], "intent": "jpkbb.20122102.xyz (root)", "file": "oc2api_system_sop.md", "type": "sop"}
+{"name": "okf_frontmatter_convention", "tags": ["memory, convention, okf"], "intent": "Schema reference for OKF frontmatter used on all L3 SOPs, handoffs, and index files.", "file": "okf_frontmatter_convention.md", "type": "reference"}
+{"name": "plan", "tags": ["ga-mode, plan"], "intent": "触发：3步以上有依赖/多文件协同/条件分支/需并行 | 禁用：1-2步简单任务直接做", "file": "plan_sop.md", "type": "sop"}
+{"name": "pre_task_scanner", "tags": ["workflow, automation, okf, search"], "intent": "用户给任务后，自动提取关键词搜 memory/ SOP，提前加载最相关的 1-2 个到工作记忆", "file": "pre_task_scanner_sop.md", "type": "sop"}
+{"name": "procmem_scanner", "tags": ["scanner, memory, monitoring"], "intent": "内存特征搜索工具，支持 Hex (CE 风格) 和 字符串匹配。特别提供 LLM 模式，方便大模型分析内存上下文。", "file": "procmem_scanner_sop.md", "type": "sop"}
+{"name": "project_mode", "tags": ["ga-mode, project"], "intent": "Project Mode = 跨会话保持项目认知的工作模式", "file": "project_mode_sop.md", "type": "sop"}
+{"name": "recovery", "tags": ["recovery, setup"], "intent": "在新机器上第一次运行 GA 时，直接说以下任意一句即可启动恢复流程：", "file": "recovery_sop.md", "type": "sop"}
+{"name": "review", "tags": ["ga-mode, review, code"], "intent": "Ga-Mode Review Code SOP for GA system", "file": "review_sop.md", "type": "sop"}
+{"name": "scheduled_task", "tags": ["scheduling, cron, automation"], "intent": "目录：`../sche_tasks/` 放任务定义JSON，`../sche_tasks/done/` 放执行报告", "file": "scheduled_task_sop.md", "type": "sop"}
+{"name": "subagent", "tags": ["ga-mode, subagent, parallel"], "intent": "Subagent 并行调用协议：task 分配、目录隔离、结果收集。cwd=temp/时工作目录为 ./{task_name}/", "file": "subagent.md", "type": "sop"}
+{"name": "supervisor", "tags": ["ga-mode, supervisor"], "intent": "目标：让用户一次说明任务后，尽量不用多轮纠偏。", "file": "supervisor_sop.md", "type": "sop"}
+{"name": "tmwebdriver", "tags": ["web, browser, automation"], "intent": "- 直接用web_scan/web_execute_js工具。本文件只记录特性和坑。", "file": "tmwebdriver_sop.md", "type": "sop"}
+{"name": "treehouse", "tags": ["skill, worktree, git"], "intent": "需要在隔离环境并行运行多个 agent 任务，或让每个 agent 有独立干净的工作目录。", "file": "treehouse_sop.md", "type": "sop"}
+{"name": "verify", "tags": ["ga-mode, verify, quality"], "intent": "验证模式：运行代码、执行测试、检查产物，不读代码代替运行。", "file": "verify_sop.md", "type": "sop"}
+{"name": "vision", "tags": ["vision, screenshot, ocr"], "intent": "1. 先枚举窗口：调用 vision 前必须先用 `pygetwindow` 枚举窗口标题，确认目标窗口存在且已激活到前台。窗口不存在就不要截图。", "file": "vision_sop.md", "type": "sop"}
+{"name": "web_setup", "tags": ["web, setup, browser"], "intent": "若 web_scan 和 web_execute_js 已测试可用，无需执行此 SOP。", "file": "web_setup_sop.md", "type": "sop"}

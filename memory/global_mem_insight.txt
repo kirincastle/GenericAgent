@@ -8,6 +8,11 @@ autonomous_operation | cf_workers | checklist | code_review | computer_use | con
 
 Search: `bash ../memory/sop_search.sh <keyword>` or `bash ../memory/lessons_search.sh <keyword>` or `python3 ../temp/.agents/skills/okf-frontmatter/scripts/find_docs.py --repo /home/moclaw/projects/external/genericagent find <term>`
 
+Indexes (JSONL, agent-native):
+- `memory/sops_index.jsonl` — SOP metadata (38 records)
+- `handoffs/handoffs.jsonl` — Handoff registry (18 records)  
+- `memory/mode_rules.jsonl` — Mode decision rules (7 records)
+
 Handoffs: handoffs/index.md (OKF frontmatter, 14 entries) | Template: handoffs/HANDOFF_TEMPLATE.md
 
 GA Commands: /goal /hive /conductor /morphling /supervisor /plan /incubator /recovery /autonomous /subagent /review /verify /project /checklist /scheduled-task /web-setup /choose-mode

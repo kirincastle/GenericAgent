@@ -1,0 +1,7 @@
+{"trigger": "modify agent own behavior / system prompt", "mode": "foreground", "reason": "must be done in current session, cannot delegate", "execution": "foreground"}
+{"trigger": "simple clear task, one file or one script", "mode": "subagent", "reason": "lightweight background execution", "execution": "background"}
+{"trigger": "many independent subtasks (5+)", "mode": "hive", "reason": "parallel workers each handle one subtask", "execution": "background", "condition": "subtask count > 5"}
+{"trigger": "open-ended exploration with time budget", "mode": "goal", "reason": "self-driven iterative optimization", "execution": "background"}
+{"trigger": "multi-step pipeline with strict dependencies", "mode": "conductor", "reason": "DAG orchestration, step A must finish before B", "execution": "background"}
+{"trigger": "task involves reading many files and writing summary", "mode": "subagent", "reason": "independent analysis task", "execution": "background"}
+{"trigger": "task is quick file read+write transform", "mode": "direct", "reason": "faster than setting up subagent", "execution": "foreground"}
