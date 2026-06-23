@@ -286,7 +286,6 @@ mixin_config = {
 #  适合 GPT/o 系列、Gemini 或任何 OAI 兼容且支持原生 tool 字段的模型。
 #  和 NativeClaudeSession 共用大部分逻辑（继承关系），只是请求走 OAI 协议。
 
-<<<<<<< HEAD
 native_oai_config = {
     'name': 'gpt-native',                           # /llms 显示名 & mixin 引用名
     'apikey': 'sk-<your-openai-key>',                # Bearer 鉴权
@@ -305,27 +304,6 @@ native_oai_config = {
     # 'context_win': 16000,                          # int 默认 24000；历史裁剪阈值
     # 'max_num_turns': 10,                           # int 默认 0(不限制)；滑动窗口保留最大轮数(含当轮)，改善缓存命中率
 }
-=======
-# 默认整段注释：新装时「独立模型」列表为空。在桌面端「添加模型」填好 apikey 后会
-# 自动生成同类 native_oai_config 变量；或取消下面注释手动填。
-# native_oai_config = {
-#     'name': 'gpt-native',                           # /llms 显示名 & mixin 引用名
-#     'apikey': 'sk-<your-openai-key>',                # Bearer 鉴权
-#     'apibase': 'https://api.openai.com/v1',          # 补齐到 /v1/chat/completions
-#     'model': 'gpt-5.4',                              # gpt-5/o 系列
-#     'api_mode': 'chat_completions',                  # 'chat_completions'（默认）|'responses'
-#     # 'reasoning_effort': 'high',                    # none|minimal|low|medium|high|xhigh
-#                                                      # chat_completions → payload.reasoning_effort
-#                                                      # responses        → payload.reasoning.effort
-#     'max_retries': 3,                                # int 默认 1
-#     'connect_timeout': 10,                           # int 秒 默认 5（最小 1）
-#     'read_timeout': 120,                             # int 秒 默认 30（最小 5）
-#     # 'temperature': 1.0,                            # float 默认 1.0
-#     # 'max_tokens': 8192,                            # int 默认 8192
-#     # 'proxy': 'http://127.0.0.1:2082',              # 可选单 session HTTP 代理
-#     # 'context_win': 16000,                          # int 默认 24000；历史裁剪阈值
-# }
->>>>>>> upstream/main
 
 # ── 也可以走 Responses API ──────────────────────────────────────────────────
 #  对接 OpenAI /v1/responses 端点。reasoning_effort 会以 reasoning.effort

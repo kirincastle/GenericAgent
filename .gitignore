@@ -157,7 +157,6 @@ frontends/conductor_im_plugins/config.local.json
 # Project Mode SOP
 !memory/project_mode_sop.md
 
-<<<<<<< HEAD
 # Caveman skill
 !memory/caveman/
 !memory/caveman/**
@@ -186,7 +185,7 @@ frontends/conductor_im_plugins/config.local.json
 !model_registry.py
 !CLAUDE.md
 
-=======
-# 本地 bug / 局限报告草稿（交给维护者参考，不进仓库）
+# ============================
+# Local bug reports — for maintainer reference, not committed
+# ============================
 /BUG_*.md
->>>>>>> upstream/main
