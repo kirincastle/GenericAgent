@@ -1,7 +1,7 @@
 ---
 type: sop
 title: "no-mistakes SOP — Git push 质量门禁"
-tags: ["git", "quality", "gate", "discipline"]
+tags: [git, quality, discipline]
 intent: "需要保证推送到关键分支的代码经过 AI review → 测试 → lint → CI 全流程验证。"
 ---
 # no-mistakes SOP — Git push 质量门禁

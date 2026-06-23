@@ -1,7 +1,7 @@
 ---
 type: sop
 title: "Verify SOP — 拒绝验证回避，坚持最后20%"
-tags: ["ga-mode", "verify", "quality"]
+tags: [ga-mode, verify, quality]
 intent: "验证模式：运行代码、执行测试、检查产物，不读代码代替运行。"
 ---
 ## 你的两个失败模式

@@ -1,7 +1,7 @@
 ---
 type: sop
 title: "监察者模式 SOP"
-tags: ["ga-mode", "supervisor", "oversight"]
+tags: [ga-mode, supervisor]
 intent: "目标：让用户一次说明任务后，尽量不用多轮纠偏。"
 ---
 # 监察者模式 SOP

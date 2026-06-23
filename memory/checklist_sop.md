@@ -1,7 +1,7 @@
 ---
 type: sop
 title: "Checklist SOP"
-tags: ["ga-mode", "checklist", "quality"]
+tags: [ga-mode, checklist, quality]
 intent: "清单执行模式：单人、master 自执行，逐项验证不跳步。适用于质量门、多步流程、验证清单。"
 ---
 # Checklist SOP

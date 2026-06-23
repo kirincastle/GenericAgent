@@ -1,7 +1,7 @@
 ---
 type: sop
 title: "记忆整理 SOP"
-tags: ["memory", "cleanup", "maintenance"]
+tags: [memory, cleanup, maintenance]
 intent: "LLM自身是压缩器+解码器。L1只需让它意识到某类知识存在，它就能通过tool call自行取用深层内容。"
 ---
 # 记忆整理 SOP

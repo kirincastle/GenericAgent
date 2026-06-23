@@ -1,7 +1,7 @@
 ---
 type: sop
 title: "Lavish Skill — HTML 产物协作编辑"
-tags: ["skill", "html", "editor"]
+tags: [skill, html, editor]
 intent: "agent 生成了复杂的 HTML 产物，需要精确反馈（框选元素/选中文本）。"
 ---
 # Lavish Skill — HTML 产物协作编辑

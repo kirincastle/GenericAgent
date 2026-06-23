@@ -1,7 +1,7 @@
 ---
 type: sop
 title: "自主行动 SOP"
-tags: ["ga-mode", "autonomous", "automation"]
+tags: [ga-mode, autonomous, automation]
 intent: "⚠️ 路径警告：autonomous_reports 在 temp/ 下，用`./autonomous_reports/`访问，不是`../memory/autonomous_reports/`或`../autonomous_reports"
 ---
 # 自主行动 SOP

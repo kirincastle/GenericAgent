@@ -1,7 +1,7 @@
 ---
 type: sop
 title: "Code Review SOP — 带意图回溯的审查流程"
-tags: ["code", "review", "quality", "ga-mode"]
+tags: [ga-mode, code, review, quality]
 intent: "Code Review Quality Ga-Mode SOP for GA system"
 ---
 # Code Review SOP — 带意图回溯的审查流程

@@ -1,7 +1,7 @@
 ---
 type: sop
 title: "ljqCtrl 使用与坐标转换 SOP"
-tags: ["mobile", "input", "keyboard", "mouse"]
+tags: [mobile, keyboard, mouse]
 intent: "- `ljqCtrl.dpi_scale`: float (缩放系数 = 逻辑宽度 / 物理宽度)"
 ---
 # ljqCtrl 使用与坐标转换 SOP

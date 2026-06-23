@@ -1,7 +1,7 @@
 ---
 type: sop
 title: "Review Mode SOP"
-tags: ["ga-mode", "review", "code"]
+tags: [ga-mode, review, code]
 intent: "Ga-Mode Review Code SOP for GA system"
 ---
 # Review Mode SOP

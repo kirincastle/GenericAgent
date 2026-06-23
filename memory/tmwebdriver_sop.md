@@ -1,7 +1,7 @@
 ---
 type: sop
 title: "TMWebDriver SOP"
-tags: ["web", "browser", "automation"]
+tags: [web, browser, automation]
 intent: "- 直接用web_scan/web_execute_js工具。本文件只记录特性和坑。"
 ---
 # TMWebDriver SOP
