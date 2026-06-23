@@ -163,6 +163,7 @@
 - 文档: memory/handoffs/*.md
 
 ## Recent
+|- **2026-06-23**: migration-dashboard **v3.1334 (Build: 09561f4, commit 3dfbf2c)** — Phase 3 complete: job store CRUD + execution + persistence + GC + history UI (tabs + detail view). Fixes: PaloAlto test date stale, job cancel integration test.
 |- **2026-06-22**: oc2api **v3.067 f61e2af (2026-06-22)** — build_commit 修复; 出口IP ipinfo.io fallback; Token高亮用 proxy_last_active（兼容所有代理模式）
 |- **2026-06-22**: oc2api **v3.066 c46693e (2026-06-22)** — (未bump版本的手动部署，已废弃)
 |- **2026-06-21**: oc2api v3.059 卡片边框对齐OK; v3.057 PROIP健康检测循环; v3.058 Tor统计修复; v3.059 SOCKS5保存修复; admin面板模式切换
