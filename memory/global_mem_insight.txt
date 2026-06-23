@@ -17,7 +17,8 @@ Handoffs: handoffs/index.md (OKF frontmatter, 14 entries) | Template: handoffs/H
 
 GA Commands: /goal /hive /conductor /morphling /supervisor /plan /incubator /recovery /autonomous /subagent /review /verify /project /checklist /scheduled-task /web-setup /choose-mode
 
-## 新会话必读
+## 行为规则（每轮激活）
+**Lessons 自动匹配**：本会话内，每次用户给非闲聊请求，自动提取关键词，运行 `bash ../memory/lessons_search.sh <关键词>`，将匹配的 `rule` 注入工作记忆。不依赖任何特定模式。
 - **"继续"/"继续上次"** → 立即读 Handoffs: handoffs/index.md，找到 `### Active` 下所有 handoff doc
   - 如果只有 1 条 → 自动继续任务
   - 如果有 ≥2 条 → 列出所有，问用户想继续哪个
