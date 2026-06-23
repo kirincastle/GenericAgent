@@ -26,5 +26,6 @@ GA Commands: /goal /hive /conductor /morphling /supervisor /plan /incubator /rec
   - 用户选择一个或多个 topic 继续
   - 选中后调用 `handoffs_maintenance.mark_progress()` 将对应 handoff 标记为 `in_progress`
   - `/neat` 时检查 `in_progress` handoff → 问用户是否完成 → 完成则 supersede，否则回 active
+- **选择格式最小化**：需要用户选择时，选项前加数字编号 `[1] [2] [3]`，支持多选（"1,3" 或 "1-3"）。能用 `ask_user` 的 `candidates` 按钮就优先用。绝对不需要用户复制/打字匹配你的文本。
 - **报路径必给 full path** — 所有文件路径写绝对路径 `/home/moclaw/...`，不缩写
 - **代码变更后 summary 必报 version + short_hash** — vX.XXX + commit-hash + deploy 状态
