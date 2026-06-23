@@ -15,7 +15,9 @@ Indexes (JSONL, agent-native):
 
 Handoffs: handoffs/index.md (OKF frontmatter, 14 entries) | Template: handoffs/HANDOFF_TEMPLATE.md
 
-GA Commands: /goal /hive /conductor /morphling /supervisor /plan /incubator /recovery /autonomous /subagent /review /verify /project /checklist /scheduled-task /web-setup /choose-mode
+GA Commands: /goal /hive /conductor /morphling /supervisor /plan /incubator /recovery /autonomous /subagent /review /verify /project /checklist /scheduled-task /web-setup /choose-mode /neat
+
+`/neat` — End-of-session knowledge cleanup (neat-freak). Runs lessons_maintenance.py, reconciles memory/docs. See `memory/neat-freak/SKILL.md`.
 
 ## 行为规则（每轮激活）
 **Lessons 自动匹配**：本会话内，每次用户给非闲聊请求，自动提取关键词，运行 `bash ../memory/lessons_search.sh <关键词>`，将匹配的 `rule` 注入工作记忆。不依赖任何特定模式。
