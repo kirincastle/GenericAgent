@@ -17,3 +17,4 @@ RULES:
 - /neat结束时: 生成handoff doc → 更新memory/handoffs/index.md
 - "继续"/"继续上次" → 读memory/handoffs/index.md找active handoff → 读对应doc
 - **自动模式提取**: 对话中检测到可复用模式（调试技巧/错误解法/项目规律）→ 自动触发 learn_eval_sop 评估保存，无需命令
+- **代码变更后summary必报 version + short_hash**: 任何项目改代码后，summary 第一行报 vX.XXX + short_hash + deploy状态
