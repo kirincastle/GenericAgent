@@ -1,13 +1,15 @@
 # reflect/goal_mode.py — Goal Mode: 持续自驱直到预算耗尽
 # 启动: set GOAL_STATE=temp/xxx.json && python agentmain.py --reflect reflect/goal_mode.py
 # 配置: agent按SOP写好state json，通过环境变量GOAL_STATE指定路径
-import os, json, time
+import os, json, time, subprocess, sys
 
 INTERVAL = 5   # check间隔短，agent跑完立刻再检查
 ONCE = False
 
 _dir = os.path.dirname(os.path.abspath(__file__))
 STATE_FILE = ''
+CODE_ROOT = os.path.normpath(os.path.join(_dir, '..'))
+
 def init(a):
     global STATE_FILE
     STATE_FILE = a.get('goal_state') or os.environ.get('GOAL_STATE') or os.path.join(_dir, '../temp/goal_state.json')
@@ -21,6 +23,54 @@ def _load():
 def _save(state):
     with open(STATE_FILE, 'w', encoding='utf-8') as f:
         json.dump(state, f, ensure_ascii=False, indent=2)
+
+# --- git checkpoint (optional, state.checkpoint_git == true) ---
+def _git(*args, capture=False):
+    try:
+        r = subprocess.run(['git'] + list(args), capture_output=True, text=True, timeout=15, cwd=CODE_ROOT)
+        return r.stdout.strip() if capture else (r.returncode == 0)
+    except Exception:
+        return '' if capture else False
+
+def _git_commit(turn, elapsed_min, objective):
+    """Git commit all changes after a successful iteration."""
+    # Check if it's a git repo
+    if not _git('rev-parse', '--git-dir'):
+        return False
+    # Add everything
+    _git('add', '-A')
+    # Check if there's anything to commit
+    diff = _git('diff', '--cached', '--stat', capture=True)
+    if not diff:
+        return False
+    # Short summary from diff stat
+    short = diff.split('\n')[0][:60] if diff else 'changes'
+    msg = f"goal: turn {turn} ({elapsed_min:.0f}min) — {short}"
+    ok = _git('commit', '-m', msg)
+    if ok:
+        _update_checkpoint_commit()
+    return ok
+
+def _git_rollback():
+    """Revert all unstaged changes."""
+    _git('checkout', '--', '.')
+    _git('clean', '-fd')
+
+def _get_diff_stats():
+    """Get diff stats since the last goal commit."""
+    last = _git('log', '--oneline', '--grep=^goal:', '-1', '--format=%H', capture=True)
+    if last:
+        stat = _git('diff', last, 'HEAD', '--stat', capture=True) or ''
+    else:
+        stat = _git('diff', '--stat', capture=True) or ''
+    return stat
+
+def _update_checkpoint_commit():
+    h = _git('rev-parse', 'HEAD', capture=True)
+    state = _load()
+    if state:
+        state['checkpoint_commit'] = h
+        _save(state)
 
 # --- prompt 模板 ---
 CONTINUATION_PROMPT = """[Goal Mode — 持续优化]
@@ -37,7 +87,7 @@ CONTINUATION_PROMPT = """[Goal Mode — 持续优化]
 2. 检验阶段：从不同视角检验创造结果，产出检验报告
     - 换身份查看（读者/受众/用户/测试工程师/领导） | 设计未跑过的更难测例 | 查素材/事实/引用的真实性与数量/说服力 | 代码质量/产物格式/美观 | 实测验证(亲自执行/模拟用户操作)
     - 按任务类型**轮换**选用合适的角色和方法
-    - 在遵循原始需求约束下追求超预期，拒绝保守和平庸，必须提出“不够出色”的点
+    - 在遵循原始需求约束下追求超预期，拒绝保守和平庸，必须提出"不够出色"的点
     - 先保及格线（无事实错误/乱码/格式错误，能运行，过基础测例，遵循用户约束），及格同时追求出色
 3. 改进阶段：针对检验报告优化改进交付物，必须实质性改进
 
@@ -67,6 +117,24 @@ BUDGET_LIMIT_PROMPT = """[Goal Mode — 预算耗尽，收口]
 4. 清理一些确定无用的中间临时文件和不再用的进程
 {done_prompt}
 """
+
+# --- 退出总结 ---
+def _exit_summary(state, elapsed):
+    status = state.get('status', 'unknown')
+    turn = state.get('turns_used', 0)
+    budget = state.get('budget_seconds', 0)
+    diff = _get_diff_stats()
+    return (
+        f"\n{'='*50}\n"
+        f"  [Goal Complete]\n"
+        f"  Status:      {status}\n"
+        f"  Total time:  {elapsed/60:.0f} min / {budget/60:.0f} min budget\n"
+        f"  Iterations:  {turn}\n"
+        f"  Changes:\n"
+        f"    {diff or '  (none recorded)'}\n"
+        f"  Checkpoint:  {state.get('checkpoint_commit', 'N/A')}\n"
+        f"{'='*50}"
+    )
 
 # --- 主逻辑 ---
 def check():
@@ -107,7 +175,27 @@ def on_done(result):
     state = _load()
     if state is None: return
     
+    # 可选: git commit-per-step（仅当 checkpoint_git 开启）
+    if state.get('checkpoint_git') and state.get('status') == 'running':
+        start_time = state.get('start_time', time.time())
+        elapsed = time.time() - start_time
+        turn = state.get('turns_used', 0)
+        objective = state.get('objective', '')
+        _git_commit(turn, elapsed, objective)
+    
+    # 收口结束 → 退出总结
     if state.get('status') == 'wrapping_up':
         state['status'] = 'done_budget'
         state['end_time'] = time.time()
         _save(state)
+        start_time = state.get('start_time', time.time())
+        elapsed = time.time() - start_time
+        summary = _exit_summary(state, elapsed)
+        # Write exit summary to a file
+        out_path = os.path.join(os.path.dirname(STATE_FILE), 'goal_exit_summary.txt')
+        try:
+            with open(out_path, 'a', encoding='utf-8') as f:
+                f.write(summary + '\n')
+        except Exception:
+            pass
+        return summary

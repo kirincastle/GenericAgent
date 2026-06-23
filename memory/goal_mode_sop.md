@@ -44,7 +44,39 @@ set GOAL_STATE=temp/goal_xxx.json && start /b python agentmain.py --reflect refl
 - 预算耗尽时自动进入收口轮，然后停止
 - 手动停：杀进程
 
+## 断电续传 checkpoint（可选）
+
+如果启用 git commit-per-step，每次迭代自动 commit，失败自动回滚：
+
+```json
+{
+  "checkpoint_git": true,
+  "last_commit_hash": "abc123..."
+}
+```
+
+**恢复流程**：
+1. 读 `goal_state.json` 获取状态
+2. 检查 git log 找到最后一个 goal commit
+3. 如果 `status == "running"` 且上次迭代未正常完成 → 从 checkpoint 处重新执行
+4. 如果已 commit 但未打到 `wrapping_up` → 继续下一轮
+
+## 退出总结（可选）
+
+`on_done()` 自动输出 exit summary，格式：
+
+```
+[Goal Complete]
+  Branch:        main
+  Total time:    47 min
+  Iterations:    14
+  Changes:       8 files, +245 -32
+  Status:        budget_exhausted
+  Unfinished:    ...
+```
+
 ## 观察进度
 
 - 状态：读 goal_state.json 的 `turns_used` / `status`
 - 详情：看 `temp/model_responses/` 下最近修改的文件尾部
+- git log：`git log --oneline --grep="goal: turn"` 查看迭代历史
