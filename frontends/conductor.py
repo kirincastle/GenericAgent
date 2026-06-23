@@ -51,9 +51,10 @@ class SubAgentState:
     prompt: str
     thread: Optional[threading.Thread] = None
     reply: str = ""
-    status: str = "running"  # running | stopped
+    status: str = "running"  # running | stopped | crashed
     created_at: int = field(default_factory=lambda: int(time.time()))
     updated_at: int = field(default_factory=lambda: int(time.time()))
+    last_heartbeat: float = 0.0
 
 ws_clients: set[WebSocket] = set()
 main_loop: Optional[asyncio.AbstractEventLoop] = None
@@ -101,6 +102,30 @@ def clean_log_text(s: str) -> str:
     s = re.sub(r'\n{3,}', '\n\n', s)
     return s.strip()
 
+# ── tmux helpers ──────────────────────────────────────────────────
+_TMUX_ENABLED = False
+try:
+    import subprocess
+    r = subprocess.run(["tmux", "-V"], capture_output=True, text=True, timeout=2)
+    _TMUX_ENABLED = r.returncode == 0
+except Exception:
+    pass
+
+def _tmux_init():
+    if not _TMUX_ENABLED: return
+    subprocess.run(["tmux", "new-session", "-d", "-s", "conductor", "-n", "status"], capture_output=True, timeout=2)
+
+def _tmux_new_pane(sid: str, label: str):
+    if not _TMUX_ENABLED: return
+    short = sid[:8]
+    safe = label.replace("'", "").replace('"', '')[:30]
+    subprocess.run(["tmux", "new-window", "-t", "conductor", "-n", short, f"echo '{safe}'; tail -f /dev/null"], capture_output=True, timeout=2)
+
+def _tmux_kill_pane(sid: str):
+    if not _TMUX_ENABLED: return
+    short = sid[:8]
+    subprocess.run(["tmux", "kill-window", "-t", f"conductor:{short}"], capture_output=True, timeout=2)
+
 def schedule_broadcast(payload: dict):
     if main_loop and main_loop.is_running():
         asyncio.run_coroutine_threadsafe(broadcast(payload), main_loop)
@@ -146,7 +171,35 @@ class SubagentPool:
     def __init__(self):
         self.subagents: Dict[str, SubAgentState] = {}
         self.lock = threading.RLock()
-        threading.Thread(target=self._auto_cleanup_loop, name="subagent-cleanup", daemon=True).start()
+        threading.Thread(target=self._heartbeat_watchdog, name="subagent-heartbeat", daemon=True).start()
+    def beat(self, sid: str):
+        with self.lock:
+            s = self.subagents.get(sid)
+            if s: s.last_heartbeat = time.time()
+    def mark_crashed(self, sid: str):
+        with self.lock:
+            s = self.subagents.get(sid)
+            if s: s.status = "crashed"
+    def _heartbeat_watchdog(self):
+        STALE_TIMEOUT = 300  # 5min
+        while True:
+            time.sleep(30)
+            now = time.time()
+            stale = []
+            with self.lock:
+                for sid, s in self.subagents.items():
+                    if s.status == "running" and s.last_heartbeat > 0 and (now - s.last_heartbeat) > STALE_TIMEOUT:
+                        stale.append((sid, s))
+            for sid, s in stale:
+                try:
+                    s.agent.abort()
+                except Exception:
+                    pass
+                with self.lock:
+                    s.status = "crashed"
+            if stale:
+                push_cards()
+                add_chat(f"⚠️ {len(stale)} subagent(s) stale (no heartbeat >{STALE_TIMEOUT}s), marked crashed: {', '.join(sid[:8] for sid,_ in stale)}", "conductor")
     def snapshot(self) -> list[dict]:
         with self.lock:
             return [
@@ -173,6 +226,7 @@ class SubagentPool:
             if s:
                 s.reply = acc
                 s.updated_at = int(time.time())
+                s.last_heartbeat = time.time()
                 s.status = "stopped" if done else "running"
     def _auto_cleanup_loop(self):
         IDLE_TIMEOUT = 3600
@@ -195,8 +249,9 @@ class SubagentPool:
         agent.verbose = False
         agent.no_print = True
         th = start_agent_runner(agent, f"subagent-{sid}")
-        state = SubAgentState(id=sid, agent=agent, prompt=prompt, status="running", thread=th)
+        state = SubAgentState(id=sid, agent=agent, prompt=prompt, status="running", thread=th, last_heartbeat=time.time())
         with self.lock: self.subagents[sid] = state
+        _tmux_new_pane(sid, prompt[:60])
         return self._send_msg(sid, prompt)
     def _send_msg(self, sid, msg):
         with self.lock: s = self.subagents.get(sid)
@@ -270,7 +325,16 @@ class Conductor:
         self.inbox: "queue.Queue[dict]" = queue.Queue()   # 收件箱：唯一对外接口
         self.agent: Optional[GenericAgent] = None
         self.started = False
-        self.log: list = []   
+        self.log: list = []
+        # Load AGENTS.md protocol
+        self.agents_md = ""
+        _md_path = os.path.join(os.path.dirname(__file__), "AGENTS.md")
+        if os.path.exists(_md_path):
+            try:
+                with open(_md_path, encoding="utf-8") as _f:
+                    self.agents_md = _f.read().strip()
+            except Exception:
+                pass   
 
     def notify(self, event: dict): self.inbox.put(event)
 
@@ -293,7 +357,11 @@ API: {base}；requests，GET /readme查用法，GET /chat读未读对话，GET /
 - 改写prompt时严禁添加用户未提及的假设、工具、前提条件。只能精炼/结构化用户原意，不能脑补，只能做很小的改写
 
 原则：
-- 信任subagent足够聪明，不要写具体步骤和容易探测的信息；能自己判断的自己判断，只在真正需要用户决策时打扰。\n
+- 信任subagent足够聪明，不要写具体步骤和容易探测的信息；能自己判断的自己判断，只在真正需要用户决策时打扰。
+
+## 操作协议
+{self.agents_md}
+
 需要处理：
 {summary}"""
 

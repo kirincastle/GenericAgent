@@ -73,6 +73,9 @@ memory/L4_raw_sessions/*
 !memory/lavish_skill.md
 !memory/code_review_sop.md
 
+# Conductor AGENTS.md protocol
+!frontends/AGENTS.md
+
 # Subagent SOP
 !memory/subagent.md
 
