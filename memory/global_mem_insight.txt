@@ -10,4 +10,4 @@ Search: `bash ../memory/sop_search.sh <keyword>` or `python3 ../temp/.agents/ski
 
 Handoffs: handoffs/index.md (OKF frontmatter, 14 entries) | Template: handoffs/HANDOFF_TEMPLATE.md
 
-GA Commands: /goal /hive /conductor /morphling /supervisor /plan /incubator /recovery /autonomous /subagent /review /verify /project /checklist /scheduled-task /web-setup
+GA Commands: /goal /hive /conductor /morphling /supervisor /plan /incubator /recovery /autonomous /subagent /review /verify /project /checklist /scheduled-task /web-setup /choose-mode
