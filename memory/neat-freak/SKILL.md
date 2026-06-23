@@ -141,6 +141,7 @@ description: >
 - **绝对时间**：永远 `2026-04-29`，不写"今天"、"最近"
 - **面向读者**：docs/ 的读者是"第一次接触这个项目的外部人"，写的时候想象对方只有 5 分钟能看完
 - **受众不混**：CLAUDE.md 里不抄 docs/ 的全文，docs/ 里不写"我记得上次……"——这是记忆的事
+- **GA 不动 CLAUDE.md**：GA (GenericAgent) 的 neat 只改 `AGENTS.md` 和 `memory/`，不改 `CLAUDE.md`。CLAUDE.md 是 Claude Code 的专属上下文，GA 不读也不写。
 - **指针不重复**：同一条事实如果 docs/ 里已详写，CLAUDE.md 只在「深入文档」指针表里出现一次，不在概览段再叙事一次
 
 **全局配置极度克制**：`~/.claude/CLAUDE.md` / `~/.codex/AGENTS.md` 只有用户在对话中明确表达了**跨项目的核心原则**才动。日常项目细节绝不进全局。
