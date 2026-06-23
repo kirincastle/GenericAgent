@@ -11,3 +11,8 @@ Search: `bash ../memory/sop_search.sh <keyword>` or `python3 ../temp/.agents/ski
 Handoffs: handoffs/index.md (OKF frontmatter, 14 entries) | Template: handoffs/HANDOFF_TEMPLATE.md
 
 GA Commands: /goal /hive /conductor /morphling /supervisor /plan /incubator /recovery /autonomous /subagent /review /verify /project /checklist /scheduled-task /web-setup /choose-mode
+
+## 新会话必读
+- **"继续"/"继续上次"** → 立即读 Handoffs: handoffs/index.md，找到 active 或最新 handoff doc，继续任务
+- **报路径必给 full path** — 所有文件路径写绝对路径 `/home/moclaw/...`，不缩写
+- **代码变更后 summary 必报 version + short_hash** — vX.XXX + commit-hash + deploy 状态
