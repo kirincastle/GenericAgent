@@ -9,6 +9,7 @@ intent: "Central registry of session handoffs"
 # Handoffs Index
 
 ## Active
+- [general] [migration-dashboard Phase 3 ✅ + Per-Device CLI Design (2026-06-23)](2026-06-23.md)
 - [lessons] [Lessons system — handoff lifecycle complete (2026-06-23)](lessons_system_2026-06-23.md)
 
 ## In Progress
