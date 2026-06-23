@@ -66,6 +66,12 @@ memory/L4_raw_sessions/*
 # Vue3 Component SOP
 !memory/vue3_component_sop.md
 
+# Lavish ecosystem SOPs
+!memory/treehouse_sop.md
+!memory/gnhf_sop.md
+!memory/no_mistakes_sop.md
+!memory/lavish_skill.md
+
 # Subagent SOP
 !memory/subagent.md
 
