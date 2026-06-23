@@ -8,7 +8,9 @@
 ## Project Abbreviations & Rules (2026-06-23)
 - **md** = migration-dashboard | **mccg** = mac-change-check-go | **rff** = route-finder-firewall
 - **报版本格式**: `vX.Y.Z (shorthash, YYYY-MM-DD)` — user pref
-- **auto-backup 规则**: 无 code change 时不得 bump version（当前 auto-backup 脚本每次提交都会 +1~2 版本号，即使仅 auto-sync 无代码变更 —— 需修复）
+- **auto-backup 规则**: 无 code change 时不得 bump version ✅ 已修复
+  - Fix A: `auto_git_push.sh`(systemd 30min) → 加 HAS_SUBSTANCE 过滤，仅 version.txt/exe 脏时不提交
+  - Fix B: `.git/hooks/post-commit` → 去掉冗余 version bump（pre-commit 已处理），避免制造脏树循环
 
 ## Ponytail (2026-06-19)
 - Source: github.com/DietrichGebert/ponytail, 6 阶梯规则: YAGNI→stdlib→native→deps→1line→minimum
@@ -142,6 +144,14 @@
 - **deploy前必问**: admin密码、UUID、自定义域名(随机4-6字母+xjdjrbfb8.us.ci)
 - **deploy用wrangler**: CF API multipart报`Unexpected token 'export'`，wrangler一次过
 - **当前部署**: flat-sunset-c7d9.minhquyphan452.workers.dev, DNS: cfet.xjdjrbfb8.us.ci, WRAPPED: proxied
+
+## Tool Auto-Use Rules (2026-06-23)
+- **codegraph 自动触发**: 需要关系型理解（调用链/影响范围/依赖图）时自动用，不等用户要求
+  - `query` → 快速定位 symbol 文件位置
+  - `impact` → 改之前评估波及范围（BFS 3 层）
+  - `callers`/`callees` → 追踪跨包调用链
+  - 简单事实查读（已知位置/小项目/刚读过）→ 直接 file_read，不用 codegraph
+- **rtk 自动触发**: 检测到自重复/低信息密度时自动调用 filter/dynamic
 
 
 ## Handoff
