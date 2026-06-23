@@ -1,23 +1,13 @@
 # [Global Memory Insight]
 Read L2 or ls ../memory/ for L3 when needed
 L0(META-SOP): memory_management_sop
-L2: oc2api ports | oc2api_system_sop | rtk | caveman | git config | cache_hit_opt | socks5_poll | console_log_card | jpkbb_timezone(hkt) | probeModelStatus | model_registry | recovery_sop | codegraph取代graphify | Hive Master移植 | worker.js架构 | 手动节点更新方案 | cf_workers_sop | edgetunnel_workers_pages_guide(**deploy前必问**密码/域名/UUID, **用wrangler**不用API multipart) | ponytail | **oc2api PROIP多节点+健康检测+Tor统计(v3.059)
-L3(OKF): 所有 L3 .md SOP 已添加 OKF frontmatter(type: sop + tags + intent) → 用 grep '^type: sop' 或 `bash ../memory/sop_search.sh <keyword>` 搜索（如果 cwd 在 temp/）
-| 搜索: `bash ../memory/sop_search.sh <keyword>` — 按 tag 或 intent 查找 SOP
-| Handoff 模板: `handoffs/HANDOFF_TEMPLATE.md`
-| 文件索引: memory_cleanup_sop, skill_search, ui_detect.py, ocr_utils.py, subagent, web_setup_sop, plan_sop, procmem_scanner, keychain, ljqCtrl_sop+.py, tmwebdriver_sop, autonomous_operation_sop, scheduled_task_sop, vision_sop, adb_ui.py, neat-freak, rtk_integration.py, rtk_tool.py, caveman, caveman_integration, ponytail, ponytail_integration, oc2api_deploy_sop, model_registry, recovery_sop, mattpocock_integration, cloudflare_skills, limit_aware_loop_integration, oc2api_system_sop, const_sop, learn_eval_sop, treehouse_sop, gnhf_sop, no_mistakes_sop, code_review_sop, lavish_skill, cf_workers_sop, checklist_sop, computer_use, edgetunnel_workers_pages_guide, github_contribution_sop, goal_hive_master_duty, goal_hive_sop, goal_mode_sop, incubator_sop, memory_management_sop(L0), morphling_sop, project_mode_sop, review_sop, supervisor_sop, verify_sop
-L4: L4_raw_sessions/ historical sessions → archives/L4_raw_sessions/ (moved for size)
-Docs: vue3_component_guide.md | code_review_principles.md (graduated to docs/) | frontends/AGENTS.md (conductor orchestration protocol) | handoff.md (example) | okf_frontmatter_convention.md
-Handoffs: handoffs/index.md (OKF frontmatter + status categories: active/completed/superseded/done, 14 entries) — 2026-06-23 | Template: handoffs/HANDOFF_TEMPLATE.md
+L2 topics: oc2api_ports | oc2api_system | rtk | caveman | git_config | cache_hit_opt | socks5_poll | jpkbb_timezone(hkt) | probeModelStatus | model_registry | codegraph | ponytail | oc2api_proip_v3.059
 
-Browser special ops: tmwebdriver_sop(file upload/image search/PDF blob/physical coords/HttpOnly Cookie/autofill bypass/cross-origin iframe/CDP/cross-tab)
-Keyboard & Mouse: ljqCtrl_sop(no pyautogui/activate first) Screenshot/Vision: ocr/vision_sop | No fullscreen capture, prefer window
-Scheduling: scheduled_task_sop | Autonomous: autonomous_operation_sop | watchdog/reflect: agentmain --reflect
-Mobile: adb_ui.py
+L3 SOPs (type: sop) — 35 files with OKF frontmatter:
+autonomous_operation | cf_workers | checklist | code_review | computer_use | const | edgetunnel_workers_pages_guide | github_contribution | gnhf | goal_hive | goal_hive_master_duty | goal_mode | incubator | lavish_skill | learn_eval | ljqCtrl_sop | memory_cleanup | morphling | no_mistakes | oc2api_deploy | oc2api_system | okf_frontmatter_convention | plan | procmem_scanner | project_mode | recovery | review | scheduled_task | subagent | supervisor | tmwebdriver | treehouse | verify | vision | web_setup
 
-RULES:
-- file_write截断大文件→"...[Truncated]..."字面写入源码→用Python code_run写完整文件
-- /neat结束时: 生成handoff doc → 更新memory/handoffs/index.md
-- "继续"/"继续上次" → 读memory/handoffs/index.md找active handoff → 读对应doc
-- **自动模式提取**: 对话中检测到可复用模式（调试技巧/错误解法/项目规律）→ 自动触发 learn_eval_sop 评估保存，无需命令
-- **代码变更后summary必报 version + short_hash**: 任何项目改代码后，summary 第一行报 vX.XXX + short_hash + deploy状态
+Search: `bash ../memory/sop_search.sh <keyword>` or `python3 ../temp/.agents/skills/okf-frontmatter/scripts/find_docs.py --repo /home/moclaw/projects/external/genericagent find <term>`
+
+Handoffs: handoffs/index.md (OKF frontmatter, 14 entries) | Template: handoffs/HANDOFF_TEMPLATE.md
+
+GA Commands: /goal /hive /conductor /morphling /supervisor /plan /incubator /recovery /autonomous /subagent /review /verify /project /checklist /scheduled-task /web-setup
