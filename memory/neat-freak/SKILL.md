@@ -1,4 +1,5 @@
 ---
+type: skill
 name: neat-freak
 description: >
   End-of-session knowledge cleanup with OCD-level rigor — reconciles project docs
@@ -143,6 +144,7 @@ description: >
 - **受众不混**：CLAUDE.md 里不抄 docs/ 的全文，docs/ 里不写"我记得上次……"——这是记忆的事
 - **GA 不动 CLAUDE.md**：GA (GenericAgent) 的 neat 只改 `AGENTS.md` 和 `memory/`，不改 `CLAUDE.md`。CLAUDE.md 是 Claude Code 的专属上下文，GA 不读也不写。
 - **GA 额外步骤：lessons 维护**：GA 的 neat 必须运行 `memory/lessons_maintenance.py`(合并相似教训、降级 weak/dormant、检测冲突)。输出冲突和降级摘要给用户确认。
+|- **GA 额外步骤：handoff 生命周期**：GA 的 neat 必须先运行 `memory/handoffs_maintenance.py` 将当前 active 的 handoff 全部 superseded，再写新 handoff 时注册到 `memory/handoffs/handoffs.jsonl`(status:active) 和 `handoffs/index.md`。新会话只看到 1 条 active handoff。
 - **指针不重复**：同一条事实如果 docs/ 里已详写，CLAUDE.md 只在「深入文档」指针表里出现一次，不在概览段再叙事一次
 
 **全局配置极度克制**：`~/.claude/CLAUDE.md` / `~/.codex/AGENTS.md` 只有用户在对话中明确表达了**跨项目的核心原则**才动。日常项目细节绝不进全局。
