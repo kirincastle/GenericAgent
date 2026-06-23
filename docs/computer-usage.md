@@ -60,4 +60,4 @@ It will detect the OS, install dependencies (`pywin32`, `pyobjc`, etc.), and per
 - [Keyboard/mouse control SOP](../memory/ljqCtrl_sop.md)
 - [UI detection module](../memory/ui_detect.py)
 - [OCR utilities](../memory/ocr_utils.py)
-- [Vision SOP](../memory/vision_sop)
+- [Vision SOP](../memory/vision_sop.md)
