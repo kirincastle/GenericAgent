@@ -1,3 +1,9 @@
+---
+type: sop
+title: "oc2api Deploy SOP — 标准部署流程"
+tags: ["oc2api", "deploy", "infra"]
+intent: "所有 oc2api 的改动，最后一步必须运行 `bash build.sh deploy <port>`，不得手动分离步骤。"
+---
 # oc2api Deploy SOP — 标准部署流程
 
 ## 核心原则

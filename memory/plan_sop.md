@@ -1,3 +1,9 @@
+---
+type: sop
+title: "Plan Mode SOP"
+tags: ["ga-mode", "plan", "strategy"]
+intent: "触发：3步以上有依赖/多文件协同/条件分支/需并行 | 禁用：1-2步简单任务直接做"
+---
 # Plan Mode SOP
 
 **触发**：3步以上有依赖/多文件协同/条件分支/需并行 | **禁用**：1-2步简单任务直接做

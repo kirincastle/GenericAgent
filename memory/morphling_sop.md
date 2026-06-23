@@ -1,3 +1,9 @@
+---
+type: sop
+title: "morphling_sop"
+tags: ["ga-mode", "morphling", "absorb"]
+intent: "Morphling 是一种项目级能力吸收/替代模式：给定任意目标项目，先抽取其目标与测例，再按组件选择调用、重写或少量复刻禁区规避，最终让自身或新产物在同一测例上达到或超过目标。"
+---
 # morphling_sop
 
 ## 定义

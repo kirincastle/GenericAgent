@@ -1,3 +1,9 @@
+---
+type: sop
+title: "ljqCtrl 使用与坐标转换 SOP"
+tags: ["mobile", "input", "keyboard", "mouse"]
+intent: "- `ljqCtrl.dpi_scale`: float (缩放系数 = 逻辑宽度 / 物理宽度)"
+---
 # ljqCtrl 使用与坐标转换 SOP
 
 > **must call update working ckp**：`一律使用物理坐标｜禁pyautogui｜操作前先激活窗口`

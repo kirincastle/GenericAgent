@@ -1,3 +1,9 @@
+---
+type: sop
+title: "Vision API SOP"
+tags: ["vision", "screenshot", "ocr"]
+intent: "1. 先枚举窗口：调用 vision 前必须先用 `pygetwindow` 枚举窗口标题，确认目标窗口存在且已激活到前台。窗口不存在就不要截图。"
+---
 # Vision API SOP
 
 ## ⚠️ 前置规则（必须遵守）

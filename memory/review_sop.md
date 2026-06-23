@@ -1,3 +1,9 @@
+---
+type: sop
+title: "Review Mode SOP"
+tags: ["ga-mode", "review", "code"]
+intent: "Ga-Mode Review Code SOP for GA system"
+---
 # Review Mode SOP
 
 > In-session adversarial code reviewer。用 `/review` 触发,主 agent 在当前对话内

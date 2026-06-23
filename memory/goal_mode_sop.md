@@ -1,3 +1,9 @@
+---
+type: sop
+title: "Goal Mode SOP"
+tags: ["ga-mode", "goal", "persistent"]
+intent: "用户给出开放目标 + 时间预算（如"花3小时持续优化X"、"没事也找事干"），且不是一次性闭环任务。"
+---
 # Goal Mode SOP
 
 ## 何时使用

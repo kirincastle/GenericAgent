@@ -1,3 +1,9 @@
+---
+type: sop
+title: "Treehouse SOP — 隔离 worktree 池"
+tags: ["skill", "worktree", "git", "isolation"]
+intent: "需要在隔离环境并行运行多个 agent 任务，或让每个 agent 有独立干净的工作目录。"
+---
 # Treehouse SOP — 隔离 worktree 池
 
 ## 何时使用

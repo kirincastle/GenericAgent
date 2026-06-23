@@ -1,3 +1,9 @@
+---
+type: sop
+title: "Project Mode SOP"
+tags: ["ga-mode", "project"]
+intent: "Project Mode = 跨会话保持项目认知的工作模式"
+---
 # Project Mode SOP
 
 ## 定义

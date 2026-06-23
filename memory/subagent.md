@@ -1,3 +1,9 @@
+---
+type: sop
+title: "Subagent 调用 SOP"
+tags: ["ga-mode", "subagent", "parallel"]
+intent: "- 目录：`temp/{task_name}/`（cwd在temp/时即`./{task_name}/`）"
+---
 # Subagent 调用 SOP
 
 ## 文件IO协议

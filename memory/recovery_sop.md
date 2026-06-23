@@ -1,3 +1,9 @@
+---
+type: sop
+title: "GenericAgent 恢复 SOP — 换电脑/重装 100% 恢复"
+tags: ["recovery", "setup", "disaster"]
+intent: "在新机器上第一次运行 GA 时，直接说以下任意一句即可启动恢复流程："
+---
 # GenericAgent 恢复 SOP — 换电脑/重装 100% 恢复
 
 ## 触发词

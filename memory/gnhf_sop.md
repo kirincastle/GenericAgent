@@ -1,3 +1,9 @@
+---
+type: sop
+title: "gnhf SOP — 自主迭代循环"
+tags: ["skill", "iteration", "loop"]
+intent: "需要 agent 无人值守地持续迭代一个目标，每次迭代 commit，失败自动回滚。"
+---
 # gnhf SOP — 自主迭代循环
 
 ## 何时使用

@@ -1,3 +1,9 @@
+---
+type: sop
+title: "定时任务 SOP"
+tags: ["scheduling", "cron", "automation"]
+intent: "目录：`../sche_tasks/` 放任务定义JSON，`../sche_tasks/done/` 放执行报告"
+---
 # 定时任务 SOP
 
 目录：`../sche_tasks/` 放任务定义JSON，`../sche_tasks/done/` 放执行报告

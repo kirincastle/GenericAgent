@@ -1,3 +1,9 @@
+---
+type: sop
+title: "Computer Use SOP — 人类概览 + Agent 执行"
+tags: ["vision", "computer-use", "automation"]
+intent: "Human overview → docs/computer-usage.md | Agent SOP: ui_detect + ljqCtrl 集成"
+---
 # computer_use
 
 > Human overview → `docs/computer-usage.md` | Agent SOP (below)

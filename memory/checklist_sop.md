@@ -1,3 +1,9 @@
+---
+type: sop
+title: "Checklist SOP"
+tags: ["ga-mode", "checklist", "quality"]
+intent: "Checklist 模式（单人，master自己执行）："
+---
 # Checklist SOP
 
 ## Booter（启动者/用户）

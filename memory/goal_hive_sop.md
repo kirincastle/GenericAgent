@@ -1,3 +1,9 @@
+---
+type: sop
+title: "Goal Hive Mode SOP"
+tags: ["ga-mode", "hive", "parallel"]
+intent: "Goal Hive = Goal Mode 的多 worker 协作协议"
+---
 # Goal Hive Mode SOP
 
 ## 定义

@@ -1,3 +1,9 @@
+---
+type: sop
+title: "Web 工具链初始化执行 SOP"
+tags: ["web", "setup", "tools", "browser"]
+intent: "若 web_scan 和 web_execute_js 已测试可用，无需执行此 SOP。"
+---
 # Web 工具链初始化执行 SOP
 
 若 web_scan 和 web_execute_js 已测试可用，无需执行此 SOP。
