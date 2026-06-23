@@ -13,11 +13,12 @@ def save(hs, dry):
         with open(HANDOFFS_FILE, 'w') as f:
             for h in hs: f.write(json.dumps(h, ensure_ascii=False) + '\n')
 
-def mark_progress(hs, handoff_id, user_confirmed):
+def mark_progress(hs, handoff_id, user_confirmed, dry=False):
     """Called by L1 'continue' flow. User picks handoff -> in_progress."""
     for h in hs:
         if h['id'] == handoff_id and h.get('status') == 'active':
             h['status'] = 'in_progress' if user_confirmed else 'active'
+            save(hs, dry)
             return h['id']
     return None
 
@@ -69,6 +70,29 @@ def update_index(hs, dry):
 def main():
     dry = '--dry-run' in sys.argv
     hs = load()
+
+    # CLI: python3 handoffs_maintenance.py mark <handoff_id>
+    if len(sys.argv) >= 3 and sys.argv[1] == 'mark':
+        hid = sys.argv[2]
+        res = mark_progress(hs, hid, user_confirmed=True, dry=dry)
+        if res:
+            print(f'Marked {res} as in_progress')
+        else:
+            print(f'Handoff not found or not active: {hid}', file=sys.stderr)
+            sys.exit(1)
+        return
+
+    # CLI: python3 handoffs_maintenance.py close <session_topic>
+    if len(sys.argv) >= 3 and sys.argv[1] == 'close':
+        topic = sys.argv[2]
+        completed = '--not-done' not in sys.argv
+        results = close_session(hs, topic, completed)
+        for status, hid in results:
+            print(f'{hid} -> {status}')
+        save(hs, dry)
+        update_index(hs, dry)
+        return
+
     print(f'Loaded {len(hs)} handoffs')
     active_self = [h for h in hs if h.get('status') == 'active']
     in_progress = [h for h in hs if h.get('status') == 'in_progress']
