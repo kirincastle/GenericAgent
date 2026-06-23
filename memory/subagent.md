@@ -2,7 +2,7 @@
 type: sop
 title: "Subagent 调用 SOP"
 tags: ["ga-mode", "subagent", "parallel"]
-intent: "- 目录：`temp/{task_name}/`（cwd在temp/时即`./{task_name}/`）"
+intent: "Subagent 并行调用协议：task 分配、目录隔离、结果收集。cwd=temp/时工作目录为 ./{task_name}/"
 ---
 # Subagent 调用 SOP
 

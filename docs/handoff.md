@@ -1,3 +1,10 @@
+---
+type: handoff
+title: "Session Handoff — 2026-06-19 (codegraph + migration-dashboard + oc2api)"
+date: "2026-06-19"
+status: "done"
+tags: [codegraph, migration-dashboard, oc2api, hive]
+---
 # Session Handoff — 2026-06-19
 
 ## 本次完成
