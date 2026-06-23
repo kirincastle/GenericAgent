@@ -153,6 +153,8 @@
   - 简单事实查读（已知位置/小项目/刚读过）→ 直接 file_read，不用 codegraph
 - **rtk 自动触发**: 检测到自重复/低信息密度时自动调用 filter/dynamic
 - **报路径规则**: 所有 file path 必须给 full path，不用相对路径或缩写。用户特地强调，牢记
+- **文档存放规则**: 文档放到**对应项目目录**的 `output/<topic>/` 子文件夹，如 `projects/migration-dashboard/output/custom-cli/`
+- **文件命名规则**: `<project>_<description>_<YYYYMMDD>_v<version>.<ext>`，如 `migration-dashboard_custom-cli-optimization-plan_20260623_v1.md`
 
 
 ## Handoff
