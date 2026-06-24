@@ -72,7 +72,7 @@ echo "$LOG_ENTRY" >> "$SEARCH_LOG"
 # Update last_match/last_used for matched lessons (skip for empty/match-all)
 if [ "$HIT_COUNT" -gt 0 ] && [ "$skip_update" = false ]; then
     python3 -c "
-import json, sys
+import json, sys, os
 LESSONS_FILE = '$LESSONS_FILE'
 ids = $MATCHED_IDS
 now = '$TIMESTAMP'
