@@ -30,4 +30,4 @@ intent: "Central registry of session handoffs"
 - ~~[oc2api PROIP handoff (2026-06-21)](oc2api_2026-06-21.md)~~
 - ~~[oc2api 2026-06-22 Session Handoff — 多地域 PROXYIP 架构设计](oc2api_2026-06-22-proxyip-arch-design.md)~~
 - ~~[oc2api 2026-06-22 Session Handoff (v3.065)](oc2api_2026-06-22-proxyip.md)~~
-- ~~[Lessons system — handoff lifecycle complete (2026-06-23)](lessons_system_2026-06-23.md)~~
+- ~~[Lessons system — handoff lifecycle complete (2026-06-23)](lessons_system_2026-06-23.md)~~- [OC2API v3 stats fix + geoip debug](oc2api-v3-stats-fix-2026-06-24.md) — 2026-06-24 [active]
