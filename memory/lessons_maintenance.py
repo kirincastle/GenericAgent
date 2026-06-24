@@ -13,7 +13,7 @@ Operations:
 Usage:
     python3 memory/lessons_maintenance.py [--dry-run] [--verbose]
 """
-import json, os, re, sys
+import json, os, re, sys, subprocess
 from datetime import datetime, timezone
 from collections import defaultdict
 
@@ -382,6 +382,23 @@ def main():
     print(f"\nResults: {len(lessons)} lessons saved")
     if conflicts:
         print(f"  Conflicts flagged: {len(conflicts)}")
+
+    # 6. OKF lint — check SOP frontmatter consistency
+    try:
+        find_docs_py = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                                     "temp", ".agents", "skills", "okf-frontmatter", "scripts", "find_docs.py")
+        if os.path.isfile(find_docs_py):
+            result = subprocess.run(
+                [sys.executable, find_docs_py, "--repo", os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                 "lint", "--ci"],
+                capture_output=True, text=True, timeout=30)
+            if result.stdout.strip():
+                print(f"\n  OKF lint: {result.stdout.strip()}")
+            if result.returncode != 0 and result.stderr.strip():
+                print(f"  OKF lint warnings: {result.stderr.strip()}")
+    except Exception as e:
+        print(f"  OKF lint skipped: {e}")
+
     print("OK" if not dry_run else "DRY RUN - no changes made")
 
 if __name__ == '__main__':
