@@ -1,7 +1,8 @@
-{"trigger": "modify agent own behavior / system prompt", "mode": "foreground", "reason": "must be done in current session, cannot delegate", "execution": "foreground"}
-{"trigger": "simple clear task, one file or one script", "mode": "subagent", "reason": "lightweight background execution", "execution": "background"}
-{"trigger": "many independent subtasks (5+)", "mode": "hive", "reason": "parallel workers each handle one subtask", "execution": "background", "condition": "subtask count > 5"}
-{"trigger": "open-ended exploration with time budget", "mode": "goal", "reason": "self-driven iterative optimization", "execution": "background"}
-{"trigger": "multi-step pipeline with strict dependencies", "mode": "conductor", "reason": "DAG orchestration, step A must finish before B", "execution": "background"}
-{"trigger": "task involves reading many files and writing summary", "mode": "subagent", "reason": "independent analysis task", "execution": "background"}
-{"trigger": "task is quick file read+write transform", "mode": "direct", "reason": "faster than setting up subagent", "execution": "foreground"}
+{"priority": 0, "trigger": "default (First Mate rule)", "mode": "subagent", "execution": "background", "reason": "First Mate默认: 99%的作业后台派发，我监督进度补不足"}
+{"priority": 1, "trigger": "user explicitly says foreground/interactive", "mode": "direct", "execution": "foreground", "reason": "用户明确要求前台执行"}
+{"priority": 1, "trigger": "trivial task: quick file read, one config change, version check", "mode": "direct", "execution": "foreground", "reason": "快速任务，派单开销大于执行本身"}
+{"priority": 2, "trigger": "many independent subtasks (5+)", "mode": "hive", "execution": "background", "reason": "并行 worker 各处理一个子任务"}
+{"priority": 2, "trigger": "open-ended exploration with time budget", "mode": "goal", "execution": "background", "reason": "自驱迭代优化"}
+{"priority": 2, "trigger": "multi-step pipeline with strict dependencies", "mode": "conductor", "execution": "background", "reason": "DAG 编排，步骤有序执行"}
+{"priority": 2, "trigger": "modify agent own behavior / system prompt", "mode": "direct", "execution": "foreground", "reason": "必须当前会话执行，无法委托"}
+{"priority": 2, "trigger": "task involves reading many files and writing summary", "mode": "subagent", "execution": "background", "reason": "独立分析任务"}

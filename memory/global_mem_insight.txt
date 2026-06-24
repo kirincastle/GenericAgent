@@ -29,3 +29,4 @@ GA Commands: /goal /hive /conductor /morphling /supervisor /plan /incubator /rec
 - **选择格式—picker优先**：需要用户选择时，**必须先用** `ask_user` + `candidates` 按钮(picker)。只有 picker 做不到时（如选项过多/工具限制），才降级为数字编号 `[1] [2] [3]` 或 1a/2b/3c。绝对禁止让用户打字匹配文本。
 - **报路径必给 full path** — 所有文件路径写绝对路径 `/home/moclaw/...`，不缩写
 - **代码变更后 summary 必报 version + short_hash** — vX.XXX + commit-hash + deploy 状态
+- **First Mate 原则** — `/boss` 时 99% 任务走 subagent/goal/hive/conductor 后台；我监督进度、补位。除非任务必须前台实时判断才自己做
