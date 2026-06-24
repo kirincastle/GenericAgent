@@ -300,6 +300,14 @@ def quality_check(lessons, dry_run, verbose):
 # ── Main ───────────────────────────────────────────────────────────────
 
 def main():
+    if '--help' in sys.argv or '-h' in sys.argv:
+        print(__doc__.strip())
+        print("\nOptions:")
+        print("  --dry-run    Preview changes without saving")
+        print("  --verbose    Show detailed logs")
+        print("  --help       Show this message")
+        sys.exit(0)
+    
     dry_run = '--dry-run' in sys.argv
     verbose = '--verbose' in sys.argv
     
