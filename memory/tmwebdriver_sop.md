@@ -137,7 +137,15 @@ web_execute_js script='{"cmd": "batch", "commands": [...]}'
 ## 连不上排查
 web_scan失败时按序排查（自动检测优先，用户参与放最后）：
 ①浏览器没开？→检查浏览器进程是否在跑(tasklist/ps)，没有则启动并打开正常URL（⚠about:blank等内部页不加载扩展）
-②WS后台挂了？→本机18766端口没监听即dead→手动**后台持续运行**`from TMWebDriver import TMWebDriver; TMWebDriver()`起master
+②WS后台挂了？→检查18765(WS扩展桥)和18766(Bottle HTTP API)端口→都没监听则TMWebDriver master dead→手动重启
 ③扩展没装？→读Chrome用户目录下`Secure Preferences`→`extensions.settings`中找`path`含`tmwd_cdp_bridge`的条目
   找到→扩展已装，排查其他原因；没找到→走web_setup_sop
-④以上都正常仍连不上→请求用户协助
+④HTTP API(18766)是单线程Bottle→被前序阻塞长轮询卡住时会拒新请求→等5s自动恢复或重启master
+⑤以上都正常仍连不上→请求用户协助
+
+## 新标签页操作规范
+- ⛔**绝对不操作用户的active tab**（如window.location.href导航会覆盖用户当前页面）；必须新建独立tab
+- ✅建新tab（HTTP API）：`POST http://127.0.0.1:18766/link` `{"cmd":"execute_js","code":"{\"cmd\":\"tabs\",\"method\":\"create\",\"url\":\"TARGET_URL\",\"active\":false}"}`
+  - 返回`{"r":{"data":{"id":TAB_ID}}}`→后续通过`switch_tab_id=TAB_ID`操作
+- ✅建新tab（CDP/扩展直传）：`{"cmd":"tabs","method":"create","url":"...","active":false}` 同理
+- ⚠弹窗拦截：window.open()/模拟a.click()均被拦截；必须用chrome.tabs.create（扩展后台权限绕过）
