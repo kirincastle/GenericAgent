@@ -9,10 +9,10 @@ intent: "Central registry of session handoffs"
 # Handoffs Index
 
 ## Active
-- [general] [migration-dashboard Phase 3 ✅ + Per-Device CLI Design (2026-06-23)](2026-06-23.md)
+*(no active handoffs)*
 
 ## In Progress
-*(none)*
+- [general] [migration-dashboard Phase 3 ✅ + Per-Device CLI Design (2026-06-23)](2026-06-23.md)  *(picked up)*
 
 ## Recently Completed
 - ~~[Handoff — 2026-06-22  CIARS maintenance + /setup-matt-pocock-skills](2026-06-22-ciars-setup-matt-pocock-skills.md)~~
