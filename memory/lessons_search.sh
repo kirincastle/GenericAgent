@@ -16,9 +16,13 @@ if [ $# -eq 0 ]; then
     exit 0
 fi
 
-# Build grep pattern from all args
+# Validate: skip last_match update if pattern is empty or match-all
 pattern=""
+skip_update=false
 for arg in "$@"; do
+    if [ -z "$arg" ] || [ "$arg" = "." ] || [ "$arg" = ".*" ]; then
+        skip_update=true
+    fi
     if [ -n "$pattern" ]; then
         pattern="$pattern|$arg"
     else
@@ -65,8 +69,8 @@ print(json.dumps(entry, ensure_ascii=False))
 ")
 echo "$LOG_ENTRY" >> "$SEARCH_LOG"
 
-# Update last_match/last_used for matched lessons
-if [ "$HIT_COUNT" -gt 0 ]; then
+# Update last_match/last_used for matched lessons (skip for empty/match-all)
+if [ "$HIT_COUNT" -gt 0 ] && [ "$skip_update" = false ]; then
     python3 -c "
 import json, sys
 LESSONS_FILE = '$LESSONS_FILE'

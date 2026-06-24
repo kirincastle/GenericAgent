@@ -41,18 +41,34 @@ def is_trivial(lesson):
 def load_lessons():
     """Load lessons with schema migration (ensure last_used field)."""
     lessons = []
+    skipped = 0
+    seen_ids = {}
     with open(LESSONS_FILE) as f:
         next_id = 1
-        for line in f:
+        for lineno, line in enumerate(f, 1):
             line = line.strip()
             if not line:
                 continue
-            L = json.loads(line)
-            # Migrate: ensure last_used field (copy from last_match or set to created)
+            try:
+                L = json.loads(line)
+            except json.JSONDecodeError as e:
+                print(f"  [WARN] Line {lineno}: JSON parse error — {e.msg}", file=sys.stderr)
+                skipped += 1
+                continue
+            # Migrate: ensure last_used field
             if 'last_used' not in L:
                 L['last_used'] = L.get('last_match', L.get('created'))
+            # Warn on duplicate IDs
+            lid = L.get('id')
+            if lid is not None:
+                if lid in seen_ids:
+                    print(f"  [WARN] Duplicate id={lid} (line {lineno}) — '{L.get('title', '')[:50]}'", file=sys.stderr)
+                else:
+                    seen_ids[lid] = lineno
             next_id = max(next_id, (L.get('id') or 0) + 1)
             lessons.append(L)
+    if skipped:
+        print(f"  [WARN] {skipped} line(s) skipped due to JSON errors", file=sys.stderr)
     return lessons
 
 def save_lessons(lessons, dry_run=False):
@@ -82,13 +98,13 @@ def score_lesson(L):
     
     effectiveness = pc / (pc + fc + 0.01)
     
-    # Weak: low effectiveness with sufficient data
-    if effectiveness < 0.3 and mc >= 3:
+    # Weak: high match but never prevented + has failures
+    if mc >= 5 and fc > 0 and pc == 0:
         L['status'] = 'weak'
         return
     
     # Dormant: never helped, only failed
-    if fc >= 3 and pc == 0:
+    if fc >= 3 and pc == 0 and mc >= 3:
         L['status'] = 'dormant'
         return
     
