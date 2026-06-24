@@ -74,6 +74,7 @@ def load_lessons():
                     old_id = lid
                     lid = next_id
                     next_id += 1
+                    L['id'] = lid
                     seen_ids[lid] = lineno
                     title = L.get('title', '')[:50]
                     print(f"  [REPAIR] Duplicate id={old_id}, reassigned to id={lid} -- '{title}'", file=sys.stderr)
