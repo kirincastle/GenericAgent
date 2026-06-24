@@ -34,5 +34,5 @@
 {"name": "tmwebdriver", "tags": ["web, browser, automation"], "intent": "- 直接用web_scan/web_execute_js工具。本文件只记录特性和坑。", "file": "tmwebdriver_sop.md", "type": "sop"}
 {"name": "treehouse", "tags": ["skill, worktree, git"], "intent": "需要在隔离环境并行运行多个 agent 任务，或让每个 agent 有独立干净的工作目录。", "file": "treehouse_sop.md", "type": "sop"}
 {"name": "verify", "tags": ["ga-mode, verify, quality"], "intent": "验证模式：运行代码、执行测试、检查产物，不读代码代替运行。", "file": "verify_sop.md", "type": "sop"}
-{"name": "vision", "tags": ["vision, screenshot, ocr"], "intent": "1. 先枚举窗口：调用 vision 前必须先用 `pygetwindow` 枚举窗口标题，确认目标窗口存在且已激活到前台。窗口不存在就不要截图。", "file": "vision_sop.md", "type": "sop"}
+{"name": "zero", "tags": ["ga-mode, zero, sweep, quality"], "intent": "全量应用质检循环：功能盘查→全量测试→全量修复→回归测试，产出 canonical spreadsheet", "file": "zero_sop.md", "type": "sop"}
 {"name": "web_setup", "tags": ["web, setup, browser"], "intent": "若 web_scan 和 web_execute_js 已测试可用，无需执行此 SOP。", "file": "web_setup_sop.md", "type": "sop"}
