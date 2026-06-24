@@ -144,7 +144,11 @@ def check():
     status = state.get('status', 'running')
     if status != 'running': return '/exit'
     
-    start_time = state.get('start_time', time.time())
+    start_time = state.get('start_time')
+    if start_time is None:
+        start_time = time.time()
+        state['start_time'] = start_time
+        _save(state)
     budget_sec = state.get('budget_seconds', 1800)  # 默认30分钟
     elapsed = time.time() - start_time
     remaining = budget_sec - elapsed
@@ -175,9 +179,14 @@ def on_done(result):
     state = _load()
     if state is None: return
     
+    start_time = state.get('start_time')
+    if start_time is None:
+        start_time = time.time()
+        state['start_time'] = start_time
+        _save(state)
+    
     # 可选: git commit-per-step（仅当 checkpoint_git 开启）
     if state.get('checkpoint_git') and state.get('status') == 'running':
-        start_time = state.get('start_time', time.time())
         elapsed = time.time() - start_time
         turn = state.get('turns_used', 0)
         objective = state.get('objective', '')
@@ -188,7 +197,6 @@ def on_done(result):
         state['status'] = 'done_budget'
         state['end_time'] = time.time()
         _save(state)
-        start_time = state.get('start_time', time.time())
         elapsed = time.time() - start_time
         summary = _exit_summary(state, elapsed)
         # Write exit summary to a file

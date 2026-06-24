@@ -1,0 +1,16 @@
+任务: 创建 git pre-commit hook
+
+位置: /home/moclaw/projects/external/genericagent/.git/hooks/pre-commit
+要求:
+1. bash 脚本，chmod +x
+2. 对 git staged 的 memory/*.md 文件做 OKF frontmatter 检查
+3. type 字段必须存在且非空 - 不合法则拒绝 commit 并报具体文件名
+4. tags 字段建议存在（但不强制），缺失时仅 warning
+5. 只检查 .md 文件，跳过 handoffs/ 子目录
+
+验证方式:
+cd /home/moclaw/projects/external/genericagent
+git add memory/plan_sop.md
+git commit --allow-empty -m "test hook"
+应能正常提交（plan_sop.md 已有完整 frontmatter）
+然后删掉测试 commit

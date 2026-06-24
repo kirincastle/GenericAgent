@@ -1,0 +1,15 @@
+任务: 给 memory/*.md 补 tags 字段
+
+要求:
+1. 遍历 memory/*.md 文件（跳过 handoffs/ 子目录和 memory_management_sop.md）
+2. 每个文件读取 YAML frontmatter
+3. 如果已有 tags 字段且非空，跳过
+4. 如果 tags 缺失或为空，根据文件名和 intent 内容推断 2-5 个相关 tags（英文）
+5. 示例: plan_sop.md -> tags: [plan, task-execution, workflow]
+6. 写回文件，保持原 frontmatter 其余字段不变
+
+输出验证:
+- grep -c 'tags:' memory/*.md | grep ':0' 应接近 0
+- 统计改了哪些文件
+
+完整路径: /home/moclaw/projects/external/genericagent/memory/

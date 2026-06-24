@@ -39,25 +39,35 @@ def is_trivial(lesson):
 # ── Load/Save ──────────────────────────────────────────────────────────
 
 def load_lessons():
+    """Load lessons with schema migration (ensure last_used field)."""
     lessons = []
     with open(LESSONS_FILE) as f:
+        next_id = 1
         for line in f:
             line = line.strip()
-            if line:
-                lessons.append(json.loads(line))
+            if not line:
+                continue
+            L = json.loads(line)
+            # Migrate: ensure last_used field (copy from last_match or set to created)
+            if 'last_used' not in L:
+                L['last_used'] = L.get('last_match', L.get('created'))
+            next_id = max(next_id, (L.get('id') or 0) + 1)
+            lessons.append(L)
     return lessons
 
 def save_lessons(lessons, dry_run=False):
+    """Save lessons, stripping internal fields like _original_status."""
     if dry_run:
         return
     with open(LESSONS_FILE, 'w') as f:
         for L in lessons:
-            f.write(json.dumps(L, ensure_ascii=False) + '\n')
+            out = {k: v for k, v in L.items() if not k.startswith('_')}
+            f.write(json.dumps(out, ensure_ascii=False) + '\n')
 
 # ── Effectiveness scoring ──────────────────────────────────────────────
 
 def score_lesson(L):
-    """Update status based on effectiveness."""
+    """Update status based on effectiveness & recency (30d weak / 60d dormant)."""
     current = L.get('status', 'active')
     if current == 'archived':
         return
@@ -65,6 +75,10 @@ def score_lesson(L):
     pc = L.get('prevent_count', 0)
     fc = L.get('fail_count', 0)
     mc = L.get('match_count', 0)
+    
+    # Save original status for retirement detection
+    if '_original_status' not in L:
+        L['_original_status'] = current
     
     effectiveness = pc / (pc + fc + 0.01)
     
@@ -78,14 +92,23 @@ def score_lesson(L):
         L['status'] = 'dormant'
         return
     
-    # Dormant: no match in 90 days
-    last_match = L.get('last_match')
-    if last_match and isinstance(last_match, str):
+    # Time-based: check last_used (or fallback to last_match)
+    last_used = L.get('last_used') or L.get('last_match')
+    if last_used and isinstance(last_used, str):
         try:
-            lm = datetime.fromisoformat(last_match)
-            days = (datetime.now(timezone.utc) - lm.replace(tzinfo=timezone.utc)).days
-            if days > 90:
+            lu = datetime.fromisoformat(last_used)
+            if lu.tzinfo is None:
+                lu = lu.replace(tzinfo=timezone.utc)
+            now = datetime.now(timezone.utc)
+            days = (now - lu).days
+            
+            # 60+ days → dormant
+            if days > 60:
                 L['status'] = 'dormant'
+                return
+            # 30+ days → weak
+            if days > 30 and current == 'active':
+                L['status'] = 'weak'
                 return
         except (ValueError, AttributeError):
             pass
@@ -93,6 +116,57 @@ def score_lesson(L):
     # Default
     if current not in ('archived', 'dormant', 'weak'):
         L['status'] = 'active'
+
+
+def retirement_report(lessons):
+    """List lessons proposed for demotion with reasons. Returns list of dicts."""
+    now = datetime.now(timezone.utc)
+    report = []
+    for L in lessons:
+        if L.get('status') == 'archived':
+            continue
+        original = L.get('_original_status', L.get('status', 'active'))
+        new_status = L.get('status', 'active')
+        if new_status == original:
+            continue
+        reason = ''
+        if new_status == 'weak':
+            last_used = L.get('last_used') or L.get('last_match')
+            if last_used:
+                try:
+                    lu = datetime.fromisoformat(last_used)
+                    if lu.tzinfo is None:
+                        lu = lu.replace(tzinfo=timezone.utc)
+                    days = (now - lu).days
+                    if 30 < days <= 60:
+                        reason = f"未使用 {days} 天 (>30天)"
+                    else:
+                        reason = "低有效性评分"
+                except (ValueError, AttributeError):
+                    reason = "低有效性评分"
+            else:
+                reason = "低有效性评分"
+        elif new_status == 'dormant':
+            last_used = L.get('last_used') or L.get('last_match')
+            if last_used:
+                try:
+                    lu = datetime.fromisoformat(last_used)
+                    if lu.tzinfo is None:
+                        lu = lu.replace(tzinfo=timezone.utc)
+                    days = (now - lu).days
+                    reason = f"未使用 {days} 天 (>60天)"
+                except (ValueError, AttributeError):
+                    reason = "从未命中 / 仅失败"
+            else:
+                reason = "从未使用"
+        report.append({
+            'id': L.get('id'),
+            'title': L.get('title', ''),
+            'original_status': original,
+            'new_status': new_status,
+            'reason': reason,
+        })
+    return report
 
 # ── Merge similar ─────────────────────────────────────────────────────
 
@@ -214,9 +288,20 @@ def main():
     if trivial_count:
         print(f"  Quality: {trivial_count} trivial lessons flagged")
     
-    # 2. Score all
+    # 2. Score all + generate retirement report
     for L in lessons:
+        # Save original status before scoring for comparison
+        if '_original_status' not in L:
+            L['_original_status'] = L.get('status', 'active')
         score_lesson(L)
+    
+    # Retirement report
+    retired = retirement_report(lessons)
+    if retired:
+        print(f"\n  ⚠ Retirements proposed ({len(retired)}):")
+        for r in retired:
+            print(f"    #{r['id']} \"{r['title'][:50]}\"  ({r['original_status']} → {r['new_status']})  {r['reason']}")
+    
     active = sum(1 for L in lessons if L.get('status') == 'active')
     weak = sum(1 for L in lessons if L.get('status') == 'weak')
     dormant = sum(1 for L in lessons if L.get('status') == 'dormant')

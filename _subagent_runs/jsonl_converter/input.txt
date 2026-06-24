@@ -1,0 +1,6 @@
+Run: python3 /home/moclaw/projects/external/genericagent/temp/build_jsonl_indexes.py
+
+This script does 3 things:
+1. Reads all memory/*.md SOP files, extracts frontmatter (name, tags, intent, type, file), writes memory/sops_index.jsonl
+2. Reads handoffs/*.md, extracts frontmatter, writes handoffs/handoffs.jsonl
+3. Writes memory/mode_rules.jsonl with predefined mode decision rules
