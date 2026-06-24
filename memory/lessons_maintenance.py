@@ -72,13 +72,24 @@ def load_lessons():
     return lessons
 
 def save_lessons(lessons, dry_run=False):
-    """Save lessons, stripping internal fields like _original_status."""
+    """Save lessons to a temp file then rename for atomic write."""
     if dry_run:
         return
-    with open(LESSONS_FILE, 'w') as f:
-        for L in lessons:
-            out = {k: v for k, v in L.items() if not k.startswith('_')}
-            f.write(json.dumps(out, ensure_ascii=False) + '\n')
+    
+    import tempfile, shutil
+    fd, tmp = tempfile.mkstemp(dir=os.path.dirname(LESSONS_FILE), suffix='.jsonl')
+    try:
+        with os.fdopen(fd, 'w') as f:
+            for L in lessons:
+                out = {k: v for k, v in L.items() if not k.startswith('_')}
+                f.write(json.dumps(out, ensure_ascii=False) + '\n')
+        # Atomic rename
+        shutil.move(tmp, LESSONS_FILE)
+    except Exception:
+        # Cleanup temp file on error
+        try: os.unlink(tmp)
+        except OSError: pass
+        raise
 
 # ── Effectiveness scoring ──────────────────────────────────────────────
 

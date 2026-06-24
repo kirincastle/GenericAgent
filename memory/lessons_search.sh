@@ -87,10 +87,26 @@ with open(LESSONS_FILE) as f:
                 L['last_used'] = now
                 L['match_count'] = L.get('match_count', 0) + 1
             lessons.append(L)
-with open(LESSONS_FILE, 'w') as f:
-    for L in lessons:
-        f.write(json.dumps(L, ensure_ascii=False) + '\n')
+import tempfile, shutil
+fd, tmp = tempfile.mkstemp(dir=os.path.dirname(LESSONS_FILE), suffix='.jsonl')
+try:
+    with os.fdopen(fd, 'w') as f:
+        for L in lessons:
+            f.write(json.dumps(L, ensure_ascii=False) + '\n')
+    shutil.move(tmp, LESSONS_FILE)
+except Exception:
+    try: os.unlink(tmp)
+    except OSError: pass
+    raise
 " 2>/dev/null || true
+
+# Rotate search log if >100 entries (keep last 50)
+if [ -f "$SEARCH_LOG" ]; then
+    log_lines=$(wc -l < "$SEARCH_LOG")
+    if [ "$log_lines" -gt 100 ]; then
+        tail -50 "$SEARCH_LOG" > "${SEARCH_LOG}.tmp" && mv "${SEARCH_LOG}.tmp" "$SEARCH_LOG"
+    fi
+fi
 fi
 
 # If no hits, optionally suggest creating a new lesson
