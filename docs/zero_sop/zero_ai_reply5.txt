@@ -1,0 +1,1174 @@
+明白了。Review #4 的结论很清晰：
+
+**架构对了，剩下的是填空题，不是重新设计。**
+
+具体缺什么：
+1. Independent verifier — 有 spec，缺 protocol
+2. Controller error handling — 缺 state machine
+3. Lesson lifecycle — 缺 pruning/staleness
+4. Oracle completeness — 只有 CWE25 完整，其余 ~8%
+5. Confidence threshold action policy
+6. Rollback / cancellation / concurrent sweep safety
+
+我逐一补全这些缺口，不重写已经对的部分。
+
+---
+
+# 补全 1：Independent Verifier Protocol
+
+```markdown
+---
+type: protocol
+title: "Zero Independent Verifier Protocol"
+file: skills/zero/verifier.sop
+max_lines: 100
+---
+
+# Independent Verifier Protocol
+
+## Invocation
+
+Main agent calls verifier via subagent at Phase 6.5:
+
+```bash
+# Write verification manifest first
+python3 $ZERO_TRACKER_PY export-verified $TRACKER \
+  > zero_artifacts/verification/manifest.json
+
+# Launch verifier as subagent
+# Pass: project path, tracker path (read-only), manifest path
+# Verifier has NO write access to tracker — writes to separate file
+bash $BOSS_SH "run zero-verifier: \
+  project=$PROJECT \
+  tracker=$TRACKER \
+  manifest=zero_artifacts/verification/manifest.json \
+  output=zero_artifacts/verification/result.json \
+  timeout=300"
+```
+
+## Verifier Agent Instructions
+
+You are an independent verifier. You did not run the sweep.
+Your job is to challenge results, not confirm them.
+
+Rules:
+1. Read `manifest.json` — this lists every feature marked `verified` with its `reproduce_cmd`
+2. Re-run each `reproduce_cmd` exactly as written
+3. Record: does re-run produce the same result the main agent claimed?
+4. Check 3 random features marked `pass_evidenced` — is the evidence plausible?
+5. Write results to `zero_artifacts/verification/result.json`
+
+Do NOT fix anything. Do NOT write to tracker. Read only.
+
+Verification result per item:
+```json
+{
+  "feature_id": "F003",
+  "claimed_status": "verified",
+  "reproduce_cmd": "npx jest zero_artifacts/batches/batch_01/tests/test_F003.test.ts",
+  "verifier_result": "confirmed|disputed|cannot_run",
+  "verifier_output_artifact": "zero_artifacts/verification/F003_rerun.txt",
+  "dispute_reason": "null or explanation"
+}
+```
+
+## Timeout and Degraded Mode
+
+```bash
+# Verifier has 300 second budget
+# If timeout exceeded: mark remaining items as "not_verified_in_time"
+# Main agent checks result.json after 300s regardless
+
+# If verifier cannot be launched (no subagent support):
+# → Self-verify with explicit caveat
+# → Reduce confidence score by flat 15% (unverified penalty)
+# → Add to report: "Independent verification unavailable — self-verified"
+```
+
+## Main Agent: Process Verifier Results
+
+```bash
+# Read verifier output
+cat zero_artifacts/verification/result.json
+
+# Count disputes
+DISPUTED=$(python3 -c "
+import json
+r = json.load(open('zero_artifacts/verification/result.json'))
+print(sum(1 for x in r if x['verifier_result'] == 'disputed'))
+")
+
+# Apply confidence penalty
+# Each dispute: -10% confidence
+# Each cannot_run: -5% confidence
+# Unverified (timeout): -3% per item
+
+# Disputed items → return to Phase 3 batch loop
+# cannot_run items → downgrade to 'needs_manual_review'
+```
+
+## Concurrent Sweep Safety
+
+```bash
+# Check for active sweep lock before starting Phase 0
+LOCK_FILE="$PROJECT/.zero_sweep.lock"
+
+if [ -f "$LOCK_FILE" ]; then
+  LOCK_PID=$(cat "$LOCK_FILE")
+  if kill -0 "$LOCK_PID" 2>/dev/null; then
+    echo "ERROR: Another sweep is running (PID $LOCK_PID). Aborting."
+    exit 1
+  else
+    echo "Stale lock found. Previous sweep may have crashed. Removing."
+    rm "$LOCK_FILE"
+  fi
+fi
+
+# Write lock
+echo $$ > "$LOCK_FILE"
+trap "rm -f $LOCK_FILE" EXIT INT TERM
+```
+```
+
+---
+
+# 补全 2：Controller State Machine (Error Handling)
+
+```markdown
+---
+type: sop-addition
+title: "Controller State Machine"
+replaces: "linear sequence in zero_controller.sop"
+max_lines: 120
+---
+
+# Controller State Machine
+
+Replace the linear sequence in zero_controller.sop with this.
+
+## States
+
+```
+INIT → P0_BOOTSTRAP → P1_TRIAGE → P2_INVENTORY → P3_BATCH_LOOP
+     → P4_BUSINESS_LOGIC → P5_REGRESSION → P6_CONFIDENCE → COMPLETE
+
+Error states: PHASE_FAILED | ABORTED | SUSPENDED
+```
+
+## Transition Rules
+
+```python
+TRANSITIONS = {
+  "INIT": {
+    "on_start": "P0_BOOTSTRAP"
+  },
+  "P0_BOOTSTRAP": {
+    "on_success": "P1_TRIAGE",
+    "on_partial": "P1_TRIAGE",        # degraded tools → continue with caveats
+    "on_no_tools": "ABORTED",         # zero.sh AND zero_tracker.py both missing
+    "on_environment_blocked": "P1_TRIAGE"  # can still triage without test env
+  },
+  "P1_TRIAGE": {
+    "on_success": "P2_INVENTORY",
+    "on_no_oracles": "P2_INVENTORY",  # skip triage, continue
+    "on_failure": "P2_INVENTORY"      # triage failure is non-fatal
+  },
+  "P2_INVENTORY": {
+    "on_success": "P3_BATCH_LOOP",
+    "on_zero_features": "P6_CONFIDENCE",  # nothing to test — still do confidence report
+    "on_failure": "ABORTED"           # can't proceed without feature list
+  },
+  "P3_BATCH_LOOP": {
+    "on_batch_complete": "P3_BATCH_LOOP",       # next batch
+    "on_all_batches_done": "P4_BUSINESS_LOGIC",
+    "on_batch_failure": "P3_BATCH_LOOP",        # log failure, continue next batch
+    "on_regression_unresolvable": "P3_BATCH_LOOP",  # mark unresolvable, continue
+    "on_context_limit": "SUSPENDED"             # checkpoint and pause
+  },
+  "P4_BUSINESS_LOGIC": {
+    "on_success": "P5_REGRESSION",
+    "on_no_applicable_oracles": "P5_REGRESSION",  # skip with note
+    "on_failure": "P5_REGRESSION"   # BL audit failure is non-fatal
+  },
+  "P5_REGRESSION": {
+    "on_gate_pass": "P6_CONFIDENCE",
+    "on_gate_fail_attempt_1": "P3_BATCH_LOOP",  # return to fix regressions
+    "on_gate_fail_attempt_2": "P3_BATCH_LOOP",
+    "on_gate_fail_attempt_3": "P6_CONFIDENCE",  # give up, report unresolved
+    "on_environment_blocked": "P6_CONFIDENCE"
+  },
+  "P6_CONFIDENCE": {
+    "on_verifier_disputes": "P3_BATCH_LOOP",  # fix disputed items
+    "on_verifier_complete": "COMPLETE",
+    "on_verifier_unavailable": "COMPLETE"     # with degraded confidence
+  },
+  "SUSPENDED": {
+    "on_resume": "<last_active_phase>"        # read from tracker
+  }
+}
+```
+
+## Phase Invocation Template
+
+```bash
+invoke_phase() {
+  local PHASE=$1
+  local SOP_FILE="skills/zero/phases/p${PHASE}.sop"
+  
+  # Load phase SOP
+  echo "=== LOADING PHASE $PHASE ==="
+  cat "$SOP_FILE"
+  
+  # Execute (agent processes the loaded SOP)
+  # ... agent execution ...
+  
+  # Write checkpoint
+  bash $ZERO_SH --log $PROJECT "{
+    \"phase\": $PHASE,
+    \"action\": \"phase_complete\",
+    \"timestamp\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\",
+    \"next_state\": \"$NEXT_STATE\"
+  }"
+  
+  # Unload (agent must not carry phase content forward)
+  echo "=== UNLOADING PHASE $PHASE ==="
+}
+```
+
+## Abort Conditions (non-negotiable)
+
+Abort and halt sweep if:
+1. `zero.sh` AND `zero_tracker.py` both missing (cannot checkpoint anything)
+2. Project path does not exist or is not readable
+3. Concurrent sweep lock held by live process
+4. User sends `/zero --abort` command
+
+On abort:
+```bash
+bash $ZERO_SH --log $PROJECT '{"action": "sweep_aborted", "reason": "..."}'
+rm -f "$PROJECT/.zero_sweep.lock"
+# Report partial results if any exist
+bash $ZERO_SH --report $PROJECT 2>/dev/null || true
+```
+
+## Suspension (context limit recovery)
+
+When approaching context limit mid-phase:
+```bash
+# 1. Write current state
+bash $ZERO_SH --log $PROJECT "{
+  \"action\": \"suspended\",
+  \"phase\": $CURRENT_PHASE,
+  \"batch\": \"$CURRENT_BATCH\",
+  \"features_remaining\": $REMAINING,
+  \"resume_instruction\": \"Load p${CURRENT_PHASE}.sop, read tracker, continue from batch $NEXT_BATCH\"
+}"
+
+# 2. Notify user
+echo "SWEEP SUSPENDED: Context limit approaching."
+echo "Phase $CURRENT_PHASE, batch $CURRENT_BATCH complete."
+echo "Processed $PROCESSED/$TOTAL features."
+echo "Resume with: /zero --resume $PROJECT"
+```
+
+## Cancellation
+
+```bash
+# /zero --abort $PROJECT
+bash $ZERO_SH --log $PROJECT '{"action":"user_abort","partial_results":"see tracker"}'
+rm -f "$PROJECT/.zero_sweep.lock"
+echo "Sweep cancelled. Partial results in zero_tracker.jsonl"
+```
+```
+
+---
+
+# 补全 3：Lesson Lifecycle
+
+```markdown
+---
+type: protocol
+title: "Lesson Lifecycle Management"
+file: skills/zero/lesson_lifecycle.sop
+max_lines: 100
+---
+
+# Lesson Lifecycle
+
+## Lesson Structure (canonical)
+
+```json
+{
+  "id": "L001",
+  "created": "2026-06-24",
+  "last_confirmed": "2026-06-24",
+  "confirmation_count": 1,
+  "category": "general|project",
+  "project": null,
+  "stack": "nodejs|python|go|rust|any",
+  "framework": "express|nextjs|django|any",
+  "oracle": "triage/cwe862",
+  "lesson": "...",
+  "false_positive_rate": "low|medium|high",
+  "signal_quality": "high|medium|low",
+  "action": "confirm_immediately|trace_required|skip_if_X",
+  "expires_after_days": 180,
+  "stale": false
+}
+```
+
+## Writing Lessons (Phase 3, 4, end of sweep)
+
+```bash
+# Project-specific lesson (stays local)
+bash $ZERO_SH --lessons $PROJECT '{
+  "category": "project",
+  "stack": "nodejs",
+  "framework": "express",
+  "oracle": "triage/cwe862",
+  "lesson": "...",
+  "false_positive_rate": "high",
+  "signal_quality": "low",
+  "action": "trace_required_before_confirm"
+}'
+
+# General lesson (syncs to global)
+bash $ZERO_SH --lessons $PROJECT '{
+  "category": "general",
+  "stack": "any",
+  "oracle": "business_logic/financial",
+  "lesson": "parseFloat in monetary context = real bug, not FP",
+  "false_positive_rate": "low",
+  "signal_quality": "high",
+  "action": "confirm_immediately_on_hit"
+}'
+```
+
+## Injecting Lessons (Phase 0)
+
+```bash
+# Load lessons relevant to current stack + framework
+STACK="nodejs"
+FRAMEWORK="express"
+
+python3 -c "
+import json, sys
+from datetime import datetime, timedelta
+
+lessons = []
+with open('memory/zero_lessons.jsonl') as f:
+    for line in f:
+        l = json.loads(line)
+        # Skip stale
+        created = datetime.fromisoformat(l['created'])
+        expires = l.get('expires_after_days', 180)
+        if (datetime.now() - created).days > expires:
+            continue
+        # Match stack/framework
+        if l['stack'] not in ['$STACK', 'any']:
+            continue
+        if 'framework' in l and l['framework'] not in ['$FRAMEWORK', 'any']:
+            continue
+        lessons.append(l)
+
+# Sort by signal_quality DESC, confirmation_count DESC
+lessons.sort(key=lambda x: (
+    {'high':3,'medium':2,'low':1}.get(x.get('signal_quality','low'), 1),
+    x.get('confirmation_count', 1)
+), reverse=True)
+
+# Return top 20
+for l in lessons[:20]:
+    print(json.dumps(l))
+" 2>/dev/null
+```
+
+## Pruning (run at end of each sweep)
+
+```bash
+python3 -c "
+import json
+from datetime import datetime
+
+output = []
+with open('memory/zero_lessons.jsonl') as f:
+    for line in f:
+        l = json.loads(line)
+        created = datetime.fromisoformat(l['created'])
+        expires = l.get('expires_after_days', 180)
+        age_days = (datetime.now() - created).days
+        
+        # Keep if: not expired
+        if age_days <= expires:
+            output.append(l)
+            continue
+        
+        # Keep if: high confirmation count (proven, keep longer)
+        if l.get('confirmation_count', 1) >= 5:
+            l['expires_after_days'] = expires + 180  # extend
+            output.append(l)
+            continue
+        
+        # Prune: expired + low confirmation
+        print(f'PRUNED: {l[\"id\"]} — {l[\"lesson\"][:50]}', file=__import__('sys').stderr)
+
+with open('memory/zero_lessons.jsonl', 'w') as f:
+    for l in output:
+        f.write(json.dumps(l) + '\n')
+
+print(f'Lessons after pruning: {len(output)}')
+" 2>/dev/null
+```
+
+## Conflict Resolution
+
+If two lessons contradict each other for the same oracle:
+```python
+# Rule: higher confirmation_count wins
+# If equal: more recent wins
+# If same day: keep both, flag as "conflicting"
+
+# Conflicting lesson flag
+{
+  "conflicting_with": "L003",
+  "conflict_note": "L001 says high FP rate, L003 says low FP. Resolved by count."
+}
+```
+
+## Staleness Detection
+
+A lesson is stale if ANY of:
+- Age > `expires_after_days` (default 180)
+- Referenced oracle file no longer exists
+- Stack/framework version changed significantly (manual flag)
+
+```bash
+# Check for orphaned oracle references
+python3 -c "
+import json, os
+with open('memory/zero_lessons.jsonl') as f:
+    for line in f:
+        l = json.loads(line)
+        oracle = l.get('oracle', '')
+        oracle_path = f'skills/zero/oracles/{oracle}.oracle'
+        if oracle and not os.path.exists(oracle_path):
+            print(f'STALE ORACLE REF: {l[\"id\"]} → {oracle_path}')
+" 2>/dev/null
+```
+```
+
+---
+
+# 补全 4：Missing Oracles (完整版)
+
+## oracles/security/authn.oracle
+
+```markdown
+---
+type: oracle
+category: security
+id: authn
+title: "Authentication Test Oracle"
+derived_from: "OWASP OTG-AUTHN"
+confidence_base: medium (requires generated test to confirm)
+---
+
+# Authentication Oracle
+
+## Discovery
+
+```bash
+# Find all auth-related routes and middleware
+grep -rn $INCLUDE $EXCLUDE \
+  -e "login\|signin\|authenticate\|auth" \
+  -e "logout\|signout" \
+  -e "register\|signup" \
+  -e "password.*reset\|forgot.*password" \
+  -e "token.*refresh\|refresh.*token" \
+  $PROJECT 2>/dev/null \
+  | grep -v "test\|spec\|mock\|node_modules" \
+  | tee zero_artifacts/triage/authn_routes.txt
+
+# Find JWT/session handling
+grep -rn $INCLUDE $EXCLUDE \
+  -e "jwt\.sign\|jwt\.verify\|jsonwebtoken" \
+  -e "session\.\|cookie\." \
+  -e "bcrypt\|argon2\|scrypt\|pbkdf2" \
+  $PROJECT 2>/dev/null \
+  | tee zero_artifacts/triage/authn_impl.txt
+```
+
+## Self-Validation
+
+Before proceeding, confirm you can identify:
+- Where credentials are received (route + field names)
+- Where credentials are verified (function name + file)
+- What token/session is issued on success (type + storage)
+
+If you cannot identify all three → mark `needs_manual_review`.
+
+## Checks
+
+| ID | Check | How | Auto-Confirm? |
+|----|-------|-----|--------------|
+| AUTHN-01 | Credentials over HTTPS only | grep for http:// in auth routes | Yes if found |
+| AUTHN-02 | Password hashed (not plaintext/MD5/SHA1) | grep for bcrypt/argon2/scrypt near password save | Yes if absent |
+| AUTHN-03 | Rate limiting on login endpoint | grep for rateLimit/throttle near login route | Suspected if absent |
+| AUTHN-04 | Account lockout or CAPTCHA after N failures | check login handler for failure counter | Suspected if absent |
+| AUTHN-05 | JWT has expiry claim | grep for expiresIn/exp in jwt.sign call | Yes if absent |
+| AUTHN-06 | Expired token rejected | trace jwt.verify — does it check exp? | Suspected, needs test |
+| AUTHN-07 | Logout invalidates token server-side | check logout handler — is token blacklisted/deleted? | Suspected if absent |
+| AUTHN-08 | Password reset token has expiry | grep for expires/ttl near reset token creation | Suspected if absent |
+| AUTHN-09 | Reset token single-use (deleted after use) | check reset handler — is token deleted on use? | Suspected if absent |
+| AUTHN-10 | Same error for wrong email vs wrong password | check error response in login handler | Yes if different messages found |
+
+## Test Template: auth_bypass
+
+```typescript
+// AUTHN-06: Expired token rejection
+it('AUTHN-06: should reject expired JWT', async () => {
+  // Generate expired token (exp in the past)
+  const expiredToken = jwt.sign(
+    { userId: testUser.id },
+    process.env.JWT_SECRET,
+    { expiresIn: -1 }  // already expired
+  )
+  
+  const response = await request(app)
+    .get('/api/protected-endpoint')
+    .set('Authorization', `Bearer ${expiredToken}`)
+  
+  expect(response.status).toBe(401)
+  expect(response.body).not.toHaveProperty('data')
+})
+
+// AUTHN-07: Logout invalidation
+it('AUTHN-07: should reject token after logout', async () => {
+  const { token } = await loginAsTestUser()
+  
+  await request(app)
+    .post('/api/auth/logout')
+    .set('Authorization', `Bearer ${token}`)
+  
+  // Token should now be invalid
+  const response = await request(app)
+    .get('/api/protected-endpoint')
+    .set('Authorization', `Bearer ${token}`)
+  
+  expect(response.status).toBe(401)
+})
+
+// AUTHN-10: Error message enumeration
+it('AUTHN-10: should return same error for wrong email vs wrong password', async () => {
+  const wrongEmailRes = await request(app)
+    .post('/api/auth/login')
+    .send({ email: 'nonexistent@example.com', password: 'anypassword' })
+  
+  const wrongPasswordRes = await request(app)
+    .post('/api/auth/login')
+    .send({ email: testUser.email, password: 'wrongpassword' })
+  
+  // Both should return 401 with identical error structure
+  expect(wrongEmailRes.status).toBe(401)
+  expect(wrongPasswordRes.status).toBe(401)
+  expect(wrongEmailRes.body.error).toBe(wrongPasswordRes.body.error)
+})
+```
+```
+
+---
+
+## oracles/security/authz.oracle
+
+```markdown
+---
+type: oracle
+category: security
+id: authz
+title: "Authorization / IDOR Oracle"
+derived_from: "OWASP OTG-AUTHZ, CWE-862, CWE-639"
+confidence_base: medium
+---
+
+# Authorization Oracle
+
+## Discovery
+
+```bash
+# Find routes with :id params (IDOR candidates)
+grep -rn $INCLUDE $EXCLUDE \
+  -e "/:id\|/:userId\|/:resourceId\|/:postId\|/{id}" \
+  $PROJECT 2>/dev/null \
+  | grep -v "test\|spec" \
+  | tee zero_artifacts/triage/idor_candidates.txt
+
+# Find ownership check patterns (what to look for)
+grep -rn $INCLUDE $EXCLUDE \
+  -e "userId.*===\|ownerId.*===\|createdBy.*===" \
+  -e "req\.user\.id.*===\|user\.id.*===" \
+  -e "where.*userId.*req\|where.*ownerId.*req" \
+  $PROJECT 2>/dev/null \
+  | grep -v "test\|spec" \
+  | tee zero_artifacts/triage/ownership_checks.txt
+
+# Find admin middleware
+grep -rn $INCLUDE $EXCLUDE \
+  -e "isAdmin\|requireAdmin\|adminOnly\|role.*admin" \
+  -e "@Roles\|@RequireRole\|hasRole" \
+  $PROJECT 2>/dev/null \
+  | tee zero_artifacts/triage/admin_guards.txt
+```
+
+## Self-Validation
+
+Before generating tests:
+- Identify at least 2 routes with :id params
+- Identify where (if anywhere) ownership is verified in those routes
+- Identify at least 1 admin-only route
+
+If no :id routes exist → IDOR checks not applicable, note and skip.
+
+## Checks
+
+| ID | Check | Suspected if |
+|----|-------|-------------|
+| AUTHZ-01 | Ownership verified before resource access | No ownership check near route handler for :id routes |
+| AUTHZ-02 | Ownership check happens BEFORE loading (not after) | Resource loaded first, then checked — leaks info |
+| AUTHZ-03 | Admin endpoints have role check | Admin route without role guard in middleware chain |
+| AUTHZ-04 | Role check is server-side | Role check only in UI / frontend code |
+| AUTHZ-05 | Horizontal privilege escalation blocked | User can't access other user's resources by changing ID |
+| AUTHZ-06 | Vertical privilege escalation blocked | Non-admin can't call admin endpoints |
+
+## Test Template: IDOR
+
+```typescript
+describe('AUTHZ: IDOR Prevention', () => {
+  let userA: TestUser
+  let userB: TestUser
+  let resourceOwnedByA: Resource
+
+  beforeAll(async () => {
+    userA = await createTestUser()
+    userB = await createTestUser()
+    resourceOwnedByA = await createResource({ userId: userA.id })
+  })
+
+  it('AUTHZ-01/05: user B cannot read user A resource', async () => {
+    const res = await request(app)
+      .get(`/api/resources/${resourceOwnedByA.id}`)
+      .set('Authorization', `Bearer ${userB.token}`)
+
+    expect([403, 404]).toContain(res.status)
+    expect(res.body).not.toHaveProperty('data.userId', userA.id)
+  })
+
+  it('AUTHZ-01/05: user B cannot update user A resource', async () => {
+    const res = await request(app)
+      .put(`/api/resources/${resourceOwnedByA.id}`)
+      .set('Authorization', `Bearer ${userB.token}`)
+      .send({ name: 'hacked' })
+
+    expect([403, 404]).toContain(res.status)
+    
+    const unchanged = await getResource(resourceOwnedByA.id)
+    expect(unchanged.name).not.toBe('hacked')
+  })
+
+  it('AUTHZ-03/06: non-admin cannot access admin endpoint', async () => {
+    const res = await request(app)
+      .get('/api/admin/users')
+      .set('Authorization', `Bearer ${userA.token}`)  // userA is not admin
+
+    expect(res.status).toBe(403)
+  })
+})
+```
+```
+
+---
+
+## oracles/business_logic/crud.oracle
+
+```markdown
+---
+type: oracle
+category: business_logic
+id: crud
+title: "CRUD Audit Oracle"
+confidence_base: medium
+---
+
+# CRUD Audit Oracle
+
+## Discovery
+
+```bash
+# Find all create operations
+grep -rn $INCLUDE $EXCLUDE \
+  -e "\.create(\|\.save(\|\.insert(\|INSERT INTO" \
+  -e "Model\.create\|repository\.save\|db\.insert" \
+  $PROJECT 2>/dev/null \
+  | grep -v "test\|spec\|migration\|seed" \
+  | tee zero_artifacts/business_logic/creates.txt
+
+# Find all delete operations
+grep -rn $INCLUDE $EXCLUDE \
+  -e "\.delete(\|\.destroy(\|\.remove(\|DELETE FROM" \
+  -e "\.deleteOne(\|\.deleteMany(\|\.findByIdAndDelete(" \
+  $PROJECT 2>/dev/null \
+  | grep -v "test\|spec\|migration" \
+  | tee zero_artifacts/business_logic/deletes.txt
+
+# Find soft delete patterns
+grep -rn $INCLUDE $EXCLUDE \
+  -e "deletedAt\|deleted_at\|isDeleted\|is_deleted\|archivedAt" \
+  $PROJECT 2>/dev/null \
+  | tee zero_artifacts/business_logic/soft_deletes.txt
+
+# Find transaction usage
+grep -rn $INCLUDE $EXCLUDE \
+  -e "transaction\|beginTransaction\|commit(\|rollback(" \
+  -e "session\.startTransaction\|prisma\.\$transaction\|sequelize\.transaction" \
+  $PROJECT 2>/dev/null \
+  | tee zero_artifacts/business_logic/transactions.txt
+```
+
+## Self-Validation
+
+Identify before proceeding:
+- Which models have soft delete vs hard delete?
+- Which operations involve multiple DB writes?
+- Does any multi-write operation NOT use a transaction?
+
+## Checks
+
+| ID | Check | Suspected if |
+|----|-------|-------------|
+| CRUD-01 | Ownership verified before delete | Delete handler has no userId check |
+| CRUD-02 | Soft-deleted records excluded from list queries | `findAll` without `deletedAt: null` filter |
+| CRUD-03 | Multi-write operations use transactions | Multiple `.save()`/`.update()` calls without transaction wrapper |
+| CRUD-04 | Cascade behavior explicit and correct | No cascade config, or cascade deletes data unintentionally |
+| CRUD-05 | Audit trail on sensitive mutations | No `updatedBy`/`createdBy`/`auditLog` on sensitive models |
+| CRUD-06 | Bulk operations scoped to user's data | Bulk update/delete without ownership filter |
+
+## Test Templates
+
+```typescript
+// CRUD-02: Soft delete exclusion
+it('CRUD-02: soft-deleted records not returned in list', async () => {
+  const item = await createItem({ userId: testUser.id })
+  await softDeleteItem(item.id)
+
+  const res = await request(app)
+    .get('/api/items')
+    .set('Authorization', `Bearer ${testUser.token}`)
+
+  const ids = res.body.data.map((i: any) => i.id)
+  expect(ids).not.toContain(item.id)
+})
+
+// CRUD-03: Transaction atomicity
+it('CRUD-03: partial failure rolls back all writes', async () => {
+  // Create a scenario where second write will fail
+  const countBefore = await getItemCount()
+  
+  try {
+    await createItemWithRelated({
+      item: validItemData,
+      related: invalidRelatedData  // force failure on second write
+    })
+  } catch (e) { /* expected */ }
+  
+  // First write should have been rolled back
+  const countAfter = await getItemCount()
+  expect(countAfter).toBe(countBefore)
+})
+```
+```
+
+---
+
+## oracles/business_logic/concurrency.oracle
+
+```markdown
+---
+type: oracle
+category: business_logic
+id: concurrency
+title: "Concurrency / Race Condition Oracle"
+confidence_base: medium (race conditions are probabilistic)
+---
+
+# Concurrency Oracle
+
+## Discovery
+
+```bash
+# Find check-then-act patterns
+grep -rn $INCLUDE $EXCLUDE \
+  -e "findOne.*then.*save\|findById.*then.*update" \
+  -e "if.*count.*==.*0.*create\|if.*exists.*return" \
+  $PROJECT 2>/dev/null \
+  | grep -v "test\|spec" \
+  | tee zero_artifacts/business_logic/check_then_act.txt
+
+# Find missing unique constraints (likely duplicate creation risk)
+grep -rn $INCLUDE $EXCLUDE \
+  -e "unique.*:\|UNIQUE\|unique_together\|@Unique\|@Index.*unique" \
+  $PROJECT 2>/dev/null \
+  | tee zero_artifacts/business_logic/unique_constraints.txt
+
+# Find queue/job processing
+grep -rn $INCLUDE $EXCLUDE \
+  -e "Queue\|Bull\|BullMQ\|Celery\|Sidekiq\|RQ\|NATS\|Kafka" \
+  $PROJECT 2>/dev/null \
+  | tee zero_artifacts/business_logic/queues.txt
+
+# Find optimistic locking (good — means they thought about concurrency)
+grep -rn $INCLUDE $EXCLUDE \
+  -e "version\|@Version\|optimistic\|cas\|compare.*and.*swap" \
+  $PROJECT 2>/dev/null \
+  | tee zero_artifacts/business_logic/optimistic_locking.txt
+```
+
+## Checks
+
+| ID | Check | Evidence needed |
+|----|-------|----------------|
+| CONC-01 | No check-then-act on shared resources without lock | grep hit + trace showing no transaction/lock |
+| CONC-02 | Unique constraints exist for uniqueness-critical fields | Model has unique constraint on email/username/etc |
+| CONC-03 | Queue jobs are idempotent | Job handler can process same message twice safely |
+| CONC-04 | Payment/debit operations have idempotency key | Idempotency key passed to payment provider |
+| CONC-05 | Database constraints enforce uniqueness (not just app-level) | DB migration has UNIQUE INDEX |
+
+## Test Template
+
+```typescript
+// CONC-01: Concurrent creation race condition
+it('CONC-01: concurrent requests create only one resource', async () => {
+  const uniqueEmail = `test-${Date.now()}@example.com`
+  
+  // Fire N simultaneous requests
+  const requests = Array(5).fill(null).map(() =>
+    request(app)
+      .post('/api/users')
+      .send({ email: uniqueEmail, password: 'password123' })
+  )
+  
+  const results = await Promise.all(requests)
+  
+  const successes = results.filter(r => r.status === 201)
+  const conflicts = results.filter(r => r.status === 409)
+  
+  // Exactly one should succeed
+  expect(successes.length).toBe(1)
+  // Others should get appropriate error
+  expect(conflicts.length).toBe(4)
+  
+  // Verify only one user exists in DB
+  const users = await getUsersByEmail(uniqueEmail)
+  expect(users.length).toBe(1)
+})
+```
+
+## Important Caveat
+
+Race condition tests are probabilistic. A passing test does NOT guarantee no race condition.
+If CONC-01 patterns found in code but test passes → note as `suspected_concurrent_risk`.
+Recommend DB-level unique constraint as defense-in-depth regardless of test result.
+```
+
+---
+
+## oracles/business_logic/temporal.oracle
+
+```markdown
+---
+type: oracle
+category: business_logic
+id: temporal
+title: "Time-Based Logic Oracle"
+confidence_base: medium
+---
+
+# Temporal Oracle
+
+## Discovery
+
+```bash
+# Find expiry logic
+grep -rn $INCLUDE $EXCLUDE \
+  -e "expiresAt\|expires_at\|expiresIn\|expiry\|ttl\|TTL" \
+  -e "new Date.*+\|Date\.now.*+\|moment.*add\|dayjs.*add" \
+  $PROJECT 2>/dev/null \
+  | grep -v "test\|spec" \
+  | tee zero_artifacts/business_logic/expiry.txt
+
+# Find time comparisons
+grep -rn $INCLUDE $EXCLUDE \
+  -e "new Date() >\|Date\.now() >\|> new Date\|< new Date" \
+  -e "isExpired\|isPast\|isBefore\|isAfter" \
+  $PROJECT 2>/dev/null \
+  | tee zero_artifacts/business_logic/time_comparisons.txt
+
+# Find hardcoded time values (magic numbers)
+grep -rn $INCLUDE $EXCLUDE \
+  -e "[0-9]\{4,\}\s*\*\s*60\|60\s*\*\s*60\|24\s*\*\s*60\|7\s*\*\s*24" \
+  $PROJECT 2>/dev/null \
+  | grep -v "test\|spec" \
+  | tee zero_artifacts/business_logic/hardcoded_time.txt
+
+# Find cron job definitions
+grep -rn $INCLUDE $EXCLUDE \
+  -e "cron\.\|schedule\.\|@Cron\|CRON_\|setInterval" \
+  $PROJECT 2>/dev/null \
+  | tee zero_artifacts/business_logic/crons.txt
+```
+
+## Checks
+
+| ID | Check | Suspected if |
+|----|-------|-------------|
+| TEMP-01 | Token/session expiry is checked on use | Expiry stored but not checked in validation path |
+| TEMP-02 | Expiry uses UTC consistently | Mix of `new Date()` and UTC comparison |
+| TEMP-03 | Trial/subscription periods cannot be extended by user | Period calculated from field user can modify |
+| TEMP-04 | Cron jobs are idempotent if run twice | Job lacks deduplication check |
+| TEMP-05 | Rate limit windows are server-authoritative | Window calculated from client-provided timestamp |
+| TEMP-06 | Hardcoded time constants are documented | Magic numbers like `86400000` without comment |
+
+## Test Templates
+
+```typescript
+// TEMP-01: Expiry enforcement
+it('TEMP-01: expired token is rejected', async () => {
+  // Create token that expired 1 second ago
+  const expiredToken = await createToken({
+    userId: testUser.id,
+    expiresAt: new Date(Date.now() - 1000)
+  })
+
+  const res = await request(app)
+    .post('/api/auth/verify-token')
+    .send({ token: expiredToken.value })
+
+  expect(res.status).toBe(401)
+  expect(res.body.error).toMatch(/expired/i)
+})
+
+// TEMP-04: Cron idempotency
+it('TEMP-04: running cleanup job twice does not corrupt data', async () => {
+  await seedTestData()
+  const countBefore = await getActiveItemCount()
+  
+  await runCleanupJob()
+  const countAfterFirst = await getActiveItemCount()
+  
+  await runCleanupJob()  // run again
+  const countAfterSecond = await getActiveItemCount()
+  
+  // Second run should produce same result, not double-delete
+  expect(countAfterSecond).toBe(countAfterFirst)
+})
+```
+```
+
+---
+
+# 补全 5：Confidence Threshold Action Policy
+
+```markdown
+---
+type: protocol-addition
+title: "Confidence Score Action Policy"
+adds_to: phases/p6_confidence.sop
+---
+
+# Confidence Score: What to Do With It
+
+## Threshold Table
+
+| Score | Rating | Action |
+|-------|--------|--------|
+| ≥ 85% | High confidence | Report as complete. Recommend: commit generated tests, add CI gates. |
+| 70-84% | Medium-high | Report as substantially complete. List `low` and `none` coverage gaps explicitly. Recommend: follow-up manual review on gaps. |
+| 55-69% | Medium | Report as partial. Mandatory: list all uncovered high-risk features by name. Recommend: second sweep scoped to gaps. |
+| 40-54% | Low | Report as preliminary. Mandatory: do NOT mark sweep as "passed". Recommend: environment setup + second full sweep. |
+| < 40% | Very low | Report as incomplete. Mandatory: stop. Do not report bugs as "fixed" — can't verify. Provide gap report only. |
+
+## Risk-Adjusted Thresholds
+
+For projects with `payment_operation` or `admin_action` features:
+- Minimum acceptable threshold is 75% (not 55%)
+- Any payment or admin feature with `low` or `none` coverage → automatic flag
+- Report cannot be marked complete until those specific features reach `medium` minimum
+
+## Threshold Violation Response
+
+If score is below threshold for project type:
+```bash
+bash $ZERO_SH --log $PROJECT '{
+  "action": "confidence_below_threshold",
+  "score": N,
+  "threshold": M,
+  "high_risk_uncovered": ["F003", "F007"],
+  "recommendation": "second_sweep|environment_fix|manual_review"
+}'
+```
+
+Output to user:
+```
+SWEEP STATUS: INCOMPLETE
+Confidence: 48% (threshold for this project: 75% — payment features present)
+
+Uncovered high-risk features:
+- F003: Payment processing (blocked_environment — no Stripe test key)
+- F007: Admin user management (needs_oracle — no test framework found)
+
+Recommended next steps:
+1. Set STRIPE_TEST_KEY in test environment
+2. Initialize Jest: npm init jest@latest
+3. Re-run: /zero --resume $PROJECT --scope F003,F007
+```
+```
+
+---
+
+# 补全 6：Test Lifecycle Management
+
+```markdown
+---
+type: protocol
+title: "Generated Test Lifecycle"
+file: skills/zero/test_lifecycle.sop
+max_lines: 80
+---
+
+# Generated Test Lifecycle
+
+## Sweep Start: Clean Artifacts
+
+```bash
+# At Phase 0 init, before any work:
+if [ -d "$PROJECT/zero_artifacts" ]; then
+  # Keep baseline files (they're from before this sweep)
+  # Remove previous batch/test artifacts
+  find "$PROJECT/zero_artifacts" -name "*.txt" -not -name "baseline_*" -delete
+  find "$PROJECT/zero_artifacts" -name "*.test.*" -delete
+  find "$PROJECT/zero_artifacts" -name "*.result.txt" -delete
+  echo "Cleaned previous sweep artifacts"
+fi
+```
+
+## Test Deduplication
+
+Before generating a test, check if equivalent exists:
+
+```bash
+# Check if a test for this feature + behavior already exists
+grep -rn "F${FEATURE_ID}\|${BEHAVIOR_ID}" \
+  "$PROJECT/src/__tests__/zero_generated/" 2>/dev/null | head -5
+```
+
+If found → do not regenerate. Re-run existing test instead.
+
+## Test Commit Decision (Phase 5)
+
+A generated test should be committed if ALL:
+- It found a real confirmed bug (`evidence_type = generated_test_fail`)
+- The bug was fixed and verified
+- The test is not already covered by existing test suite
+- The test is self-contained (no zero_artifacts dependencies)
+
+A generated test should NOT be committed if:
+- It only passed (no bug found — might just test happy path we already know works)
+- It depends on zero_artifacts paths or test utilities
+- It duplicates an existing test
+- It's a concurrency test that's probabilistic (commit with strong caveat comment)
+
+```bash
+# Commit worthy tests
+mkdir -p "$PROJECT/src/__tests__/zero_generated"
+
+for test in zero_artifacts/batches/*/tests/*.test.ts; do
+  FEATURE_ID=$(basename "$test" | grep -o 'F[0-9]*')
+  
+  # Check if this test found a real bug
+  FOUND_BUG=$(python3 $ZERO_TRACKER_PY query $TRACKER \
+    "feature_id=$FEATURE_ID AND evidence_type=generated_test_fail" 2>/dev/null)
+  
+  if [ -n "$FOUND_BUG" ]; then
+    # Add header comment
+    echo "// Generated by Zero Sweep $(date +%Y-%m-%d). Found real bug in F${FEATURE_ID}." \
+      > "$PROJECT/src/__tests__/zero_generated/${FEATURE_ID}_$(basename $test)"
+    cat "$test" >> "$PROJECT/src/__tests__/zero_generated/${FEATURE_ID}_$(basename $test)"
+    echo "COMMITTED: $test → zero_generated/"
+  fi
+done
+```
+
+## Stale Test Detection (future sweeps)
+
+At Phase 0, check committed zero_generated tests against current code:
+```bash
+# Find zero_generated tests whose feature code has changed since test was written
+for test in "$PROJECT/src/__tests__/zero_generated/"*.test.ts; do
+  FEATURE_ID=$(grep -o 'F[0-9]*' "$test" | head -1)
+  CODE_FILE=$(python3 $ZERO_TRACKER_PY get $TRACKER $FEATURE_ID code_location 2>/dev/null)
+  
+  if [ -n "$CODE_FILE" ]; then
+    TEST_DATE=$(git log --format="%ai" -- "$test" | head -1)
+    CODE_CHANGED=$(git log --after="$TEST_DATE" --format="%ai" -- "$CODE_FILE" | head -1)
+    
+    if [ -n "$CODE_CHANGED" ]; then
+      echo "STALE TEST: $test — code changed after test was written"
+      echo "Review: does test still reflect intended behavior?"
+    fi
+  fi
+done
+```
+```
+
+---
+
+# 最终文件清单（完整）
+
+```
+skills/zero/
+├── zero_controller.sop              ✅ Complete (Reply #4)
+├── verifier.sop                     ✅ Complete (this reply)
+├── lesson_lifecycle.sop             ✅ Complete (this reply)
+├── test_lifecycle.sop               ✅ Complete (this reply)
+│
+├── phases/
+│   ├── p0_bootstrap.sop             ✅ Complete (Reply #4)
+│   ├── p1_triage.sop                ✅ Complete (Reply #4)
+│   ├── p2_inventory.sop             ✅ Complete (Reply #4)
+│   ├── p3_batch_loop.sop            ✅ Complete (Reply #4)
+│   ├── p4_business_logic.sop        ✅ Complete (Reply #4)
+│   ├── p5_regression.sop            ✅ Complete (Reply #4)
+│   └── p6_confidence.sop            ✅ Complete (Reply #4)
+│
+├── oracles/
+│   ├── triage/
+│   │   ├── cwe25.oracle             ✅ Complete (Reply #4)
+│   │   ├── secrets.oracle           ✅ (in p1_triage.sop)
+│   │   └── config.oracle            ✅ (in p1_triage.sop)
+│   ├── security/
+│   │   ├── authn.oracle             ✅ Complete (this reply)
+│   │   ├── authz.oracle             ✅ Complete (this reply)
+│   │   └── inpval.oracle            ⬜ Remaining
+│   ├── business_logic/
+│   │   ├── crud.oracle              ✅ Complete (this reply)
+│   │   ├── financial.oracle         ✅ (in Reply #3, adapted)
+│   │   ├── state_machine.oracle     ✅ (in Reply #3, adapted)
+│   │   ├── concurrency.oracle       ✅ Complete (this reply)
+│   │   └── temporal.oracle          ✅ Complete (this reply)
+│   └── confidence/
+│       └── sweep_assessment.oracle  ✅ (in p6_confidence.sop)
+│
+└── zero_lessons.jsonl               ✅ Schema complete (this reply)
+```
+
+剩余唯一缺口：`security/inpval.oracle`（输入验证）。
+
+需要我补完 inpval.oracle，还是你想先把这些文件集成进你的本地系统验证？

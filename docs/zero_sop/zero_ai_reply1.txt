@@ -1,0 +1,620 @@
+
+
+明白了。让我重新理解你的实际环境：
+
+1. **JSONL 是对的** — 人不读，AI 读，保持机器格式
+2. **工具链存在** — codegraph、boss.sh、zero_tracker.py 都有，问题是 AI 找不到路径或不确定怎么调用
+3. **多 mode 架构是对的** — goal/hive/conductor/subagents 都存在，问题是 AI 不知道什么情况该选哪个，以及 context window 限制是真实约束
+
+所以核心问题不是"过度架构"，而是：**原版 SOP 告诉 AI "调什么"，但没告诉 AI "怎么判断、怎么发现、怎么验证"。**
+
+---
+
+```markdown
+---
+type: sop
+title: "Zero Mode SOP — /zero Full Quality Sweep"
+tags: [ga-mode, zero, sweep, quality]
+intent: "Full quality audit cycle: discover all features → create user stories → test exhaustively → fix all errors → regression test → produce canonical tracker + final report + lessons"
+---
+
+# Zero Mode SOP — Full Quality Sweep
+
+## Purpose
+
+Execute a complete quality sweep on a codebase. The cycle is:
+1. Discover every feature and create user stories with expected behavior from code
+2. Test every user story and document all errors
+3. Fix every logistical error and UX error
+4. Test every user behavior again post-fix
+
+The canonical tracker (`zero_tracker.jsonl`) is the single source of truth throughout.
+
+---
+
+## Bootstrap: Tool Discovery
+
+Before doing anything, you MUST verify your toolchain exists and find correct paths.
+
+### Required Tools Checklist
+
+Run these commands and confirm each tool responds. Do NOT proceed until all are verified.
+
+```bash
+# 1. Find zero.sh — the orchestrator
+find / -name "zero.sh" -path "*/memory/*" 2>/dev/null
+# Expected: returns a path like /path/to/memory/zero.sh
+# Verify: bash <found_path> --help  OR  head -20 <found_path>
+
+# 2. Find zero_tracker.py — the tracker manager
+find / -name "zero_tracker.py" -path "*/memory/*" 2>/dev/null
+# Expected: returns a path like /path/to/memory/zero_tracker.py
+# Verify: python3 <found_path> --help  OR  head -20 <found_path>
+
+# 3. Find boss.sh — the mode decision engine
+find / -name "boss.sh" -path "*/memory/*" 2>/dev/null
+# Expected: returns a path like /path/to/memory/boss.sh
+# Verify: bash <found_path> --help  OR  head -20 <found_path>
+
+# 4. Find codegraph tools — code analysis
+# Try these in order until one works:
+which codegraph_files && echo "codegraph_files found"
+which codegraph_query && echo "codegraph_query found"
+which codegraph_callers && echo "codegraph_callers found"
+which codegraph_callees && echo "codegraph_callees found"
+which codegraph_impact && echo "codegraph_impact found"
+# If 'which' fails, search:
+find / -name "codegraph*" 2>/dev/null
+
+# 5. Find OKF tools (optional — not all projects have docs)
+find / -name "find_docs.py" -path "*/okf*" 2>/dev/null
+# If found, verify: python3 <found_path> --help
+```
+
+### Record Discovered Paths
+
+After discovery, set these as your working references for the entire session:
+
+```
+ZERO_SH=<discovered path>
+ZERO_TRACKER_PY=<discovered path>
+BOSS_SH=<discovered path>
+CODEGRAPH_PREFIX=<discovered path or command prefix>
+OKF_FIND_DOCS=<discovered path or "NOT_AVAILABLE">
+```
+
+### If a Tool is Missing
+
+| Tool | If missing | Action |
+|------|-----------|--------|
+| zero.sh | Cannot proceed | Stop and tell user: "zero.sh not found, searched [paths]. Please provide location." |
+| zero_tracker.py | Cannot proceed | Stop and tell user: "zero_tracker.py not found." |
+| boss.sh | Can proceed in direct mode | Log warning, skip mode decision, execute all phases directly |
+| codegraph | Can proceed with degraded discovery | Use manual file reading + grep instead. Note: discovery will be slower and less complete |
+| OKF find_docs.py | Can proceed | Skip documentation cross-referencing |
+
+---
+
+## Mode Decision: How to Execute
+
+### Why Mode Selection Matters
+
+The main agent has a finite context window. A full quality sweep on a non-trivial project WILL exceed it if done entirely in one context. Mode selection is not optional — it is a resource allocation decision.
+
+### How to Decide
+
+Call boss.sh with the task description:
+
+```bash
+bash $BOSS_SH "run full zero audit and fix cycle on <project_path>"
+```
+
+Boss returns JSON with `mode` and `execution` fields. Use this decision.
+
+### If Boss is Unavailable, Use This Heuristic
+
+After Phase 1 (feature discovery), count the features and assess complexity:
+
+| Condition | Mode | Rationale |
+|-----------|------|-----------|
+| ≤ 15 features, simple stack (1 language, no external services) | **direct** | Fits in one context window |
+| 16-40 features OR moderate complexity | **goal** | Background task, self-manages context by checkpointing to tracker |
+| > 40 features AND features are independent (e.g., separate API endpoints) | **hive** | Parallelize: each worker tests/fixes a batch of features |
+| > 40 features AND features have deep dependencies (e.g., auth → data → UI chain) | **conductor** | Orchestrate phases serially, but within Phase 2, fan out to workers for independent features |
+| Mixed: some independent, some chained | **conductor + hive** | Conductor manages phases; within Phase 2, hive handles independent features in parallel while chained features run serially |
+
+### Context Window Management Rules
+
+Regardless of mode:
+
+1. **After completing each phase**, write all state to the tracker (`zero_tracker.jsonl`) and log (`zero_log.jsonl`). The tracker IS your checkpoint.
+2. **If approaching context limit in direct mode**, output the current tracker state, tell the user "Phase N complete, M features processed, continuing in next message", and resume by re-reading the tracker.
+3. **In goal/hive/conductor mode**, each agent/worker reads the tracker at start, does its work, writes results back to the tracker. The tracker is the coordination mechanism.
+4. **Never hold state only in memory** — if it's not in the tracker or log, it doesn't exist.
+
+---
+
+## Phase 1: Feature Discovery & User Story Creation
+
+### Objective
+Produce a complete inventory of every user-facing and system-internal feature, each with:
+- A user story
+- Concrete expected behavior derived from actual code reading
+- Code location references
+
+### Execution Steps
+
+#### Step 1.1: Initialize the tracker
+
+```bash
+bash $ZERO_SH --init <project_path>
+```
+
+This creates:
+- `<project_path>/zero_tracker.jsonl` — feature records
+- `<project_path>/zero_log.jsonl` — event timeline
+- `<project_path>/zero_lessons.jsonl` — lessons learned
+
+#### Step 1.2: Discover project structure with codegraph
+
+```bash
+# List all files in the project
+codegraph_files <project_path>
+
+# Find all route/API/component definitions
+codegraph_query "route|router|api|class|component|handler|controller|model|schema|middleware"
+
+# Trace from entry points to find feature boundaries
+codegraph_impact "main|index|app|server"
+```
+
+#### Step 1.3: Systematic feature enumeration
+
+Using codegraph output AND manual file reading, find features from ALL of these sources. Do NOT stop at routes — many bugs hide in non-route code.
+
+| Source | How to find | What each item becomes |
+|--------|------------|----------------------|
+| Route/endpoint definitions | codegraph_query for route/router/api/handler | One feature per endpoint (or grouped by resource if CRUD) |
+| UI pages/views/screens | codegraph_query for page/view/screen/component; also check file tree for pages/ views/ screens/ directories | One feature per page/view |
+| Database models/schemas | codegraph_query for model/schema/entity; check ORM files | CRUD operations per model = features |
+| Auth/permission logic | codegraph_query for auth/guard/middleware/permission/role | One feature per auth boundary (login, logout, role check, token refresh, etc.) |
+| Background jobs/workers | codegraph_query for cron/job/worker/queue/schedule | One feature per job |
+| Integrations (3rd party) | Check env vars, config files, import statements for SDK names | One feature per integration point |
+| Error handling | codegraph_query for error/exception/catch/handler | One feature per error handling strategy |
+| File upload/download | codegraph_query for upload/download/file/stream/multer/s3 | One feature per file operation |
+| Notifications/email | codegraph_query for email/notification/sms/push/webhook | One feature per notification type |
+| Search/filter/sort | codegraph_query for search/filter/sort/query/paginate | One feature per search surface |
+| Settings/config UI | Check for settings/preferences/config pages | One feature per settings area |
+| Navigation/layout | Check for nav/sidebar/header/footer/breadcrumb | One feature for overall navigation structure |
+
+#### Step 1.4: For each discovered feature, create a user story
+
+Read the actual code to derive expected behavior. Do NOT guess. Do NOT assume based on naming.
+
+```
+For each feature, you must:
+1. Open the code file(s)
+2. Read the implementation
+3. Identify: what input does it take? what does it do? what does it return/render?
+4. Identify: what error cases does the code handle? what cases does it NOT handle?
+5. Write the user story and expected behavior based on what the code ACTUALLY does (not what it should do — that's Phase 2's job)
+```
+
+#### Step 1.5: Write each feature to the tracker
+
+```bash
+python3 $ZERO_TRACKER_PY add <tracker_path> '{
+  "id": "F001",
+  "name": "User Login",
+  "category": "auth",
+  "user_story": "As a user, I submit email and password to authenticate and receive a session",
+  "expected_behavior": [
+    "POST /api/auth/login with {email, password}",
+    "Validates email format and password presence",
+    "Checks credentials against database",
+    "On success: returns 200 with JWT token, sets httpOnly cookie",
+    "On wrong password: returns 401 with error message",
+    "On nonexistent email: returns 401 with same error message (no email enumeration)",
+    "On missing fields: returns 400 with validation errors"
+  ],
+  "code_location": ["src/routes/auth.ts:14-45", "src/middleware/validate.ts:8"],
+  "dependencies": [],
+  "status": "pending"
+}'
+```
+
+#### Step 1.6: Cross-reference with OKF documentation (if available)
+
+```bash
+# For each feature, check if documentation exists
+python3 $OKF_FIND_DOCS --repo <project_path> find <feature_name>
+# If docs exist, add doc_ref to the feature record
+# If docs describe behavior that differs from code, note this — it's either a doc bug or a code bug (Phase 2 will determine which)
+```
+
+#### Step 1.7: Log phase completion
+
+```bash
+bash $ZERO_SH --log <project_path> '{"phase": 1, "action": "discovery_complete", "feature_count": N, "categories": {"auth": 3, "api": 12, "ui": 8, ...}}'
+```
+
+### Phase 1 Completion Criteria
+
+Before moving to Phase 2, verify ALL of the following:
+
+```bash
+# Check tracker stats
+python3 $ZERO_TRACKER_PY stats <tracker_path>
+```
+
+- [ ] Every route/endpoint in the codebase has a corresponding feature entry
+- [ ] Every UI page/view has a corresponding feature entry
+- [ ] Every data model's operations are covered
+- [ ] Auth boundaries are explicitly called out as features
+- [ ] Error handling paths are called out as features
+- [ ] Every feature has `expected_behavior` with at least 2 items (happy path + at least one error path)
+- [ ] Every feature has `code_location` pointing to real files and line numbers
+- [ ] Dependencies between features are recorded (e.g., "F005 depends on F001 for auth")
+- [ ] All features have status `pending`
+
+**If you find gaps, add more features before proceeding. Do NOT discover new features in Phase 2.**
+
+---
+
+## Phase 2: Exhaustive Testing
+
+### Objective
+Test every feature against its expected behavior. Document every discrepancy, error, and problem. Be adversarial — your job is to find bugs, not confirm things work.
+
+### Testing Methodology
+
+For EACH feature, perform ALL of these checks. Do not skip any.
+
+#### Check A: Code Path Verification
+```
+1. Open every file in code_location
+2. Trace the happy path: does the code actually implement each item in expected_behavior?
+3. Trace every branch/conditional: what happens in each case?
+4. Trace error paths: are errors caught? are they returned to the user meaningfully?
+5. Check: are there code paths that are NOT covered by expected_behavior? (These are undiscovered behaviors — add them)
+```
+
+#### Check B: Dependency Chain Verification
+```bash
+# For each function in the feature:
+codegraph_callees <function_name>
+# → What does this function call? Are those callees correctly implemented?
+# → Are external dependencies (DB, APIs, file system) properly handled?
+
+codegraph_callers <function_name>
+# → Who calls this? Is the caller passing correct arguments?
+```
+
+#### Check C: Problem Pattern Scan
+
+For each feature, systematically check for these categories of problems:
+
+| # | Category | What to look for | How to check |
+|---|----------|-----------------|-------------|
+| 1 | **Input validation** | Missing validation, wrong validation, no sanitization | Read every point where user input enters the system. Is it validated before use? |
+| 2 | **Error handling** | Unhandled exceptions, swallowed errors, generic error messages, no error return to user | Search for try/catch. Check: does catch block do something useful? Check: what happens if an async call fails? |
+| 3 | **Auth/authz gaps** | Endpoints without auth middleware, missing role checks, token not validated | For every route, trace the middleware chain. Is auth checked? Is the right role required? |
+| 4 | **Data integrity** | Race conditions, missing transactions, partial writes, orphaned records | Check DB operations: are related writes in a transaction? What happens if one write fails mid-sequence? |
+| 5 | **State management** | Stale state, missing cleanup, state leak between requests/sessions | Check: is state properly initialized? Is it cleaned up? Can one user's state leak to another? |
+| 6 | **UX/response correctness** | Wrong HTTP status codes, missing response fields, inconsistent response formats, no loading/empty states | Check: does the response match what the frontend expects? Are error responses consistent? |
+| 7 | **Configuration** | Hardcoded values that should be configurable, missing env var defaults, typos in env var names | Check: are URLs, keys, limits configurable? What happens if an env var is missing? |
+| 8 | **Edge cases** | Empty input, very long input, special characters, concurrent requests, zero items, exactly-one item | For each input, consider: what if it's null? empty string? empty array? 10MB string? |
+| 9 | **Integration correctness** | Wrong API versions, incorrect request formats, missing error handling for external service failures | Check: do external API calls match the current API documentation? What if the external service is down? |
+| 10 | **Performance traps** | N+1 queries, unbounded result sets, missing pagination, no caching where needed, synchronous blocking | Check: are DB queries efficient? Is there a LIMIT? Are there queries in loops? |
+
+#### Check D: OKF Documentation Cross-Reference (if available)
+```bash
+python3 $OKF_FIND_DOCS --repo <project_path> find <feature_name>
+# If doc exists:
+# 1. Read doc's expected behavior / schema
+# 2. Compare with actual code behavior
+# 3. If they disagree:
+#    - If code is wrong → record as code bug
+#    - If doc is wrong → record as doc bug
+#    - If both seem intentional but different → record as inconsistency
+```
+
+### Recording Test Results
+
+For each feature, update the tracker:
+
+**If PASS (all checks passed):**
+```bash
+python3 $ZERO_TRACKER_PY update <tracker_path> F001 \
+  status pass \
+  test_notes '["Happy path verified: login returns JWT", "Error paths verified: 401 on bad password, 400 on missing fields", "Auth middleware correctly applied", "No input validation issues found"]'
+```
+
+**If FAIL (any check found a problem):**
+```bash
+python3 $ZERO_TRACKER_PY update <tracker_path> F003 \
+  status fail \
+  errors '[
+    {"category": "security", "severity": "high", "description": "Password reset token has no expiry — token in DB has no expires_at field, remains valid forever", "location": "src/auth/reset.ts:22"},
+    {"category": "security", "severity": "medium", "description": "No rate limiting on POST /api/auth/reset — attacker can enumerate valid emails by timing", "location": "src/routes/auth.ts:67"},
+    {"category": "ux", "severity": "low", "description": "Reset success page shows user email in URL query param — minor information leak", "location": "src/pages/ResetSuccess.tsx:5"}
+  ]'
+```
+
+**Error severity definitions (use these consistently):**
+
+| Severity | Definition | Example |
+|----------|-----------|---------|
+| critical | Data loss, security breach, app crash | Unhandled exception crashes server, SQL injection, auth bypass |
+| high | Feature broken, incorrect behavior | Login returns wrong user's data, payment charged twice |
+| medium | Feature works but with significant issues | Missing validation allows bad data, error messages expose internals |
+| low | UX problems, cosmetic issues, minor inconsistencies | Wrong HTTP status code (200 instead of 201), missing loading state |
+
+### Phase 2 Completion Criteria
+
+```bash
+python3 $ZERO_TRACKER_PY stats <tracker_path>
+```
+
+- [ ] Zero features with status `pending` (all are `pass` or `fail`)
+- [ ] Every `fail` feature has at least one error entry with: category, severity, description, location
+- [ ] Every `pass` feature has `test_notes` explaining what was verified (not just "looks ok")
+- [ ] Error descriptions are specific and actionable (file:line, exact condition, exact consequence)
+- [ ] No vague errors like "doesn't work" or "seems broken"
+
+Log completion:
+```bash
+bash $ZERO_SH --log <project_path> '{"phase": 2, "action": "testing_complete", "passed": M, "failed": K, "total_errors": E}'
+```
+
+---
+
+## Phase 3: Fix Every Error
+
+### Objective
+Fix every documented error. Document every fix. Do not introduce undocumented changes.
+
+### Pre-Fix Planning
+
+Before writing any code:
+
+1. **Sort by dependency**: If F002's fix would affect F005, fix F002 first
+2. **Sort by severity**: critical → high → medium → low
+3. **Group related errors**: If 5 endpoints all lack input validation, fix the pattern once (e.g., add a validation middleware)
+4. **For each fix, do impact analysis BEFORE changing code**:
+
+```bash
+codegraph_impact <function_to_change>
+# → Lists all callers and transitive dependents
+# → These features ALL need regression testing in Phase 4
+```
+
+### Fix Execution Rules
+
+**For each error:**
+
+1. **Read the error record** from the tracker
+2. **State what you will change** (which file, which lines, what the change does)
+3. **State the expected impact** (which other features share this code — from codegraph_impact)
+4. **Make the minimum change** that fixes the documented error
+5. **Do NOT**:
+   - Refactor surrounding code
+   - Add new features
+   - Optimize things that aren't in the error list
+   - Change code style or formatting
+   - "While I'm here" changes of any kind
+6. **If you discover a NEW bug while fixing**, add it to the tracker as a new feature/error entry with status `fail`. Do NOT silently fix it.
+
+### Recording Fixes
+
+```bash
+python3 $ZERO_TRACKER_PY update <tracker_path> F003 \
+  status fixed \
+  fixes '[
+    {"error_ref": 0, "description": "Added expires_at field to reset token with 1 hour TTL", "files_changed": ["src/auth/reset.ts:22-28", "src/models/ResetToken.ts:5"], "impact": ["F004"]},
+    {"error_ref": 1, "description": "Added rate limiter middleware: max 5 reset requests per email per hour", "files_changed": ["src/middleware/rateLimit.ts:new", "src/routes/auth.ts:67"], "impact": []},
+    {"error_ref": 2, "description": "Removed email from URL params, store in session instead", "files_changed": ["src/pages/ResetSuccess.tsx:5-12", "src/routes/auth.ts:72"], "impact": ["F001"]}
+  ]'
+```
+
+### Record Lessons
+
+For patterns that emerge during fixing:
+
+```bash
+bash $ZERO_SH --lessons <project_path> '{"category": "project", "lesson": "All auth routes lacked rate limiting — added global auth rate limiter"}'
+
+# If the lesson is generalizable beyond this project:
+bash $ZERO_SH --lessons <project_path> '{"category": "general", "lesson": "Always add rate limiting to auth endpoints as default — not as afterthought"}'
+```
+
+### Phase 3 Completion Criteria
+
+- [ ] Every `fail` feature now has status `fixed`
+- [ ] Every fix has a description of what was changed
+- [ ] Every fix lists files_changed with specific file:line references
+- [ ] Every fix lists impacted features (from codegraph_impact) that need regression testing
+- [ ] No undocumented code changes were made
+- [ ] New bugs discovered during fixing are recorded as new entries (not silently fixed)
+
+Log completion:
+```bash
+bash $ZERO_SH --log <project_path> '{"phase": 3, "action": "fixing_complete", "fixed_count": L, "new_bugs_found": N}'
+```
+
+---
+
+## Phase 4: Regression Testing
+
+### Objective
+Verify every fix works. Verify fixes didn't break anything else. Iterate until clean.
+
+### Test Order (mandatory)
+
+1. **First**: Re-test every feature with status `fixed` — does the fix actually resolve the error?
+2. **Second**: Re-test every feature listed in any fix's `impact` array
+3. **Third**: Re-test every feature that shares a `code_location` file with any fixed feature
+4. **Fourth**: Spot-check adjacent features (same module/directory)
+
+For efficiency, use codegraph to determine exact regression scope:
+
+```bash
+# For each fixed function:
+codegraph_impact <fixed_function>
+# → Get all transitive dependents
+# → These ALL need re-testing
+```
+
+### Re-Testing Rules
+
+Apply the SAME rigor as Phase 2. For each re-tested feature:
+- Run all Check A through Check D from Phase 2
+- Specifically verify the fix: does the exact error condition from Phase 2 now produce the correct behavior?
+- Check for NEW problems that didn't exist before the fix
+
+### Recording Regression Results
+
+**Fix verified, no regression:**
+```bash
+python3 $ZERO_TRACKER_PY update <tracker_path> F003 \
+  status verified \
+  regression_notes '["Re-tested: token now expires after 1 hour — confirmed", "Re-tested: rate limit returns 429 after 5 attempts — confirmed", "Re-tested: email no longer in URL — confirmed"]'
+```
+
+**Fix didn't work:**
+```bash
+python3 $ZERO_TRACKER_PY update <tracker_path> F003 \
+  status fail \
+  errors '[...original errors plus new note...]' \
+  regression_notes '["Fix attempted but token still does not expire — expires_at field is set but not checked during validation at reset.ts:40"]'
+```
+
+**Fix caused regression in another feature:**
+```bash
+python3 $ZERO_TRACKER_PY update <tracker_path> F008 \
+  status regressed \
+  errors '[{"category": "logic", "severity": "high", "description": "After F003 rate limiter was added, legitimate login requests are also rate-limited because rate limiter is applied to all /auth/* routes, not just /auth/reset", "location": "src/middleware/rateLimit.ts:3", "caused_by": "F003 fix"}]'
+```
+
+### Regression Loop
+
+```
+IF any feature has status "regressed" or "fail" (fix didn't work):
+  → Return to Phase 3 for ONLY those features
+  → After fixing, return to Phase 4 to re-verify
+  → Repeat until: zero "regressed" and zero "fail" features remain
+  
+Termination conditions:
+  - All features are "pass" or "verified" → SUCCESS
+  - A fix has been attempted 3 times and still fails → Mark as "unresolvable", document why, continue with other features
+  - Regression loop has iterated 5 times → Stop, report remaining issues, ask user for guidance
+```
+
+### Phase 4 Completion Criteria
+
+```bash
+python3 $ZERO_TRACKER_PY stats <tracker_path>
+```
+
+- [ ] Zero features with status `pending`, `fixed`, or `regressed`
+- [ ] All features are: `pass`, `verified`, or `unresolvable`
+- [ ] Every `verified` feature has `regression_notes` explaining what was re-checked
+- [ ] Every `unresolvable` feature has a clear explanation of why it couldn't be fixed
+- [ ] Regression loop did not exceed 5 iterations
+
+Log completion:
+```bash
+bash $ZERO_SH --log <project_path> '{"phase": 4, "action": "regression_complete", "verified": V, "pass": P, "unresolvable": U, "regression_iterations": I}'
+```
+
+---
+
+## Phase 5: Final Report & Lesson Sync
+
+### Generate Report
+
+```bash
+bash $ZERO_SH --report <project_path>
+```
+
+This produces `<project_path>/zero_report.md` with:
+- Summary statistics (total, pass, fail, fixed, verified, unresolvable)
+- Feature-by-feature details
+- Error patterns identified
+- Lessons learned
+- Timeline (from zero_log.jsonl)
+
+### Sync General Lessons
+
+```bash
+bash $ZERO_SH --sync-lessons <project_path>
+```
+
+This copies `category=general` lessons from project's `zero_lessons.jsonl` to the global `memory/lessons.jsonl`.
+
+### Update OKF Documentation (if applicable)
+
+For any feature where documentation was found to be incorrect:
+```bash
+# Update the doc to match the corrected code behavior
+python3 $OKF_FIND_DOCS --repo <project_path> schema <doc_path>
+# Edit the doc's expected behavior to match verified behavior
+```
+
+---
+
+## Anti-Patterns — What NOT to Do
+
+These are the failure modes that cause zero sweeps to miss bugs. Check yourself against these throughout.
+
+| # | Anti-Pattern | Why It's Wrong | What to Do Instead |
+|---|-------------|---------------|-------------------|
+| 1 | Skipping features that "look fine" | The point is exhaustive coverage — obvious code has non-obvious bugs | Test every feature, even trivial ones |
+| 2 | Writing vague errors: "doesn't work", "seems broken" | Vague errors can't be fixed | Every error must have: file:line, exact condition, exact consequence |
+| 3 | Fixing undocumented problems | Undocumented fixes bypass regression tracking | If you find a new bug during Phase 3, add it to tracker first, then fix it |
+| 4 | Testing by reading only — "the code looks correct" | Code that looks correct can still be wrong (wrong imports, stale references, runtime type mismatches) | Trace actual execution paths: follow imports, check callees, verify data flow |
+| 5 | Testing and fixing one feature at a time (interleaving Phase 2 and 3) | You lose the full picture. Fix A might conflict with Fix B. You need to see ALL errors before fixing ANY | Complete ALL of Phase 2 before starting Phase 3 |
+| 6 | Marking a feature "pass" without stating what was verified | "Pass" with no evidence is worthless | Every pass must have test_notes listing specific behaviors checked |
+| 7 | Making "while I'm here" improvements during Phase 3 | Untracked changes cause untracked regressions | Fix ONLY documented errors. Nothing else. |
+| 8 | Skipping impact analysis before fixing | Fixing without knowing the blast radius causes regressions | Always run codegraph_impact before changing any code |
+| 9 | Holding state only in context (not writing to tracker) | Context resets, agent switches, window limits — unwritten state is lost state | Write to tracker after every feature tested, every error found, every fix applied |
+| 10 | Giving up on regression loop after first iteration | First regression fix often causes second regression | Follow the loop protocol: iterate until clean or hit the 5-iteration safety limit |
+
+---
+
+## Mode-Specific Execution Notes
+
+### Direct Mode
+- Execute all phases in the current conversation
+- After each phase, output tracker stats as a checkpoint
+- If approaching context limit: write all state to tracker, tell user "Phase N complete, continuing", resume by re-reading tracker
+
+### Goal Mode
+- Launch as background task
+- Each phase = one goal checkpoint
+- Tracker is the checkpoint mechanism — goal resumes by reading tracker
+- Report to user when all phases complete
+
+### Hive Mode
+- Phase 1: single agent (discovery must be centralized to avoid duplicates)
+- Phase 2: fan out — each worker takes a batch of features, writes results to tracker
+- Phase 3: fan out — each worker takes a batch of errors, writes fixes to tracker (but check impact overlaps — if two workers' fixes affect the same file, serialize them)
+- Phase 4: fan out — each worker re-tests its batch
+
+### Conductor Mode
+- Orchestrate phases serially (1 → 2 → 3 → 4 → 5)
+- Within Phase 2 and 4, optionally fan out to hive workers for parallelism
+- Conductor reads tracker between phases to make go/no-go decisions
+- If Phase 4 finds regressions, conductor loops back to Phase 3
+
+### Integration with Other Modes
+
+| Mode | When Zero Calls It | Purpose |
+|------|-------------------|---------|
+| `/boss` | Step 2 (mode decision) | Decide goal/hive/conductor/direct |
+| `/goal` | Phase 2-4 background execution | Self-managing background task |
+| `/hive` | Phase 2, 4 parallel testing | Multiple workers test features simultaneously |
+| `/conductor` | Multi-phase orchestration | Manage phase transitions and regression loops |
+| `/supervisor` | Phase 3 quality check | Verify fix quality before Phase 4 |
+| `/checklist` | Phase completion criteria | Systematic phase gate verification |
+```

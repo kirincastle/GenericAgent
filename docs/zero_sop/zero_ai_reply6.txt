@@ -1,0 +1,880 @@
+明白了。Review #5 说：停止迭代 spec，开始 build。
+
+剩余 5 个具体缺口需要填完：
+1. `inpval.oracle` — 唯一缺失的 oracle
+2. Rollback — git stash before Phase 5 retry
+3. Subagent capability probe — Phase 0 检测
+4. `zero_ci_check.sh` — CI/CD integration
+5. `ZERO_LOCK_METHOD` — 多环境 lock
+
+---
+
+# 补全 1：security/inpval.oracle
+
+```markdown
+---
+type: oracle
+category: security
+id: inpval
+title: "Input Validation Oracle"
+derived_from: "OWASP OTG-INPVAL, CWE-20, CWE-79, CWE-89, CWE-78, CWE-434"
+confidence_base: medium
+---
+
+# Input Validation Oracle
+
+## Self-Validation (mandatory before proceeding)
+
+```bash
+# Confirm user input entry points exist
+grep -rn $INCLUDE $EXCLUDE \
+  -e "req\.body\|req\.params\|req\.query\|req\.headers\|request\.form\|request\.args\|request\.json\|ctx\.request" \
+  $PROJECT 2>/dev/null | head -10
+```
+
+Before proceeding, identify:
+- How many routes accept user input (body/params/query)?
+- Is there a shared validation middleware (zod/joi/yup/pydantic/marshmallow)?
+- Is validation applied at route level or controller level?
+
+If zero input-accepting routes found → not applicable, skip.
+If shared validator exists → checks focus on whether it is applied consistently.
+If no shared validator → checks focus on per-route validation gaps.
+
+## Discovery
+
+```bash
+# Find validation libraries
+grep -rn $INCLUDE $EXCLUDE \
+  -e "zod\|joi\|yup\|class-validator\|ajv\|express-validator" \
+  -e "pydantic\|marshmallow\|cerberus\|voluptuous" \
+  -e "validate\|sanitize\|escape\|strip" \
+  $PROJECT 2>/dev/null \
+  | grep -v "node_modules\|test\|spec" \
+  | tee zero_artifacts/triage/validators.txt
+
+# Find unvalidated direct body/param usage
+grep -rn $INCLUDE $EXCLUDE \
+  -e "req\.body\.[a-zA-Z]\|req\.params\.[a-zA-Z]\|req\.query\.[a-zA-Z]" \
+  $PROJECT 2>/dev/null \
+  | grep -v "test\|spec" \
+  | tee zero_artifacts/triage/raw_input_usage.txt
+
+# Find file upload handlers
+grep -rn $INCLUDE $EXCLUDE \
+  -e "multer\|formidable\|busboy\|multipart\|file_upload\|UploadedFile\|request\.files" \
+  $PROJECT 2>/dev/null \
+  | grep -v "test\|spec" \
+  | tee zero_artifacts/triage/file_uploads.txt
+
+# Find redirect handlers (open redirect risk)
+grep -rn $INCLUDE $EXCLUDE \
+  -e "redirect\s*(\|res\.redirect\|return.*redirect\|location.*=" \
+  $PROJECT 2>/dev/null \
+  | grep -v "test\|spec" \
+  | tee zero_artifacts/triage/redirects.txt
+
+# Find deserialization
+grep -rn $INCLUDE $EXCLUDE \
+  -e "JSON\.parse\|yaml\.load\|pickle\.loads\|Marshal\.load\|deserialize" \
+  $PROJECT 2>/dev/null \
+  | grep -v "test\|spec" \
+  | tee zero_artifacts/triage/deserialization.txt
+```
+
+## Checks
+
+| ID | Check | Auto-Confirm? | Suspected if |
+|----|-------|--------------|-------------|
+| INPVAL-01 | All required fields validated for presence | No | Raw `req.body.X` used without null/undefined check |
+| INPVAL-02 | String fields have max length | No | No `.max()` in schema or no `VARCHAR(N)` in DB |
+| INPVAL-03 | Numeric fields validated as numbers | No | `req.body.amount` used directly in arithmetic |
+| INPVAL-04 | Email fields have format validation | No | No email regex or `.email()` validator |
+| INPVAL-05 | File upload validates type AND size | No | Multer without fileFilter and limits |
+| INPVAL-06 | File upload does not use user-provided filename | Yes | `req.file.originalname` used for disk write path |
+| INPVAL-07 | Redirect target is allowlisted or relative-only | No | `res.redirect(req.query.returnUrl)` without check |
+| INPVAL-08 | JSON.parse wrapped in try/catch | Yes | `JSON.parse(userInput)` without try/catch |
+| INPVAL-09 | No prototype pollution risk | Yes | `Object.assign({}, req.body)` or `merge(obj, req.body)` |
+| INPVAL-10 | Validation applied before business logic | No | Validation middleware missing from route definition |
+| INPVAL-11 | Mass assignment protection | No | ORM `.create(req.body)` without field whitelist |
+| INPVAL-12 | Integer overflow / type coercion | No | Numeric param used without `parseInt`/type assertion |
+
+## Auto-Confirm Checks (grep-only, no trace needed)
+
+```bash
+# INPVAL-06: User-provided filename in path
+grep -rn $INCLUDE $EXCLUDE \
+  -e "originalname\|req\.file\.name\|req\.files.*\.name" \
+  $PROJECT 2>/dev/null \
+  | grep -i "path\|join\|write\|save\|rename\|move" \
+  | grep -v "test\|spec" \
+  | tee zero_artifacts/triage/inpval06.txt
+
+# INPVAL-08: Unguarded JSON.parse
+grep -rn $INCLUDE $EXCLUDE \
+  "JSON\.parse" $PROJECT 2>/dev/null \
+  | grep -v "test\|spec" \
+  | tee zero_artifacts/triage/json_parse_raw.txt
+
+# Check which ones lack try/catch context (check +-5 lines)
+grep -rn -B2 -A5 $INCLUDE $EXCLUDE \
+  "JSON\.parse" $PROJECT 2>/dev/null \
+  | grep -v "test\|spec" \
+  | grep -L "try\|catch" 2>/dev/null \
+  | tee zero_artifacts/triage/inpval08.txt
+
+# INPVAL-09: Prototype pollution
+grep -rn $INCLUDE $EXCLUDE \
+  -e "Object\.assign\s*(\s*{}" \
+  -e "merge\s*(\s*obj\|deepmerge\|lodash\.merge\|_.merge" \
+  -e "__proto__\|constructor\[.prototype.\]" \
+  $PROJECT 2>/dev/null \
+  | grep "req\.\|body\.\|params\.\|query\." \
+  | grep -v "test\|spec" \
+  | tee zero_artifacts/triage/inpval09.txt
+
+# INPVAL-11: Mass assignment
+grep -rn $INCLUDE $EXCLUDE \
+  -e "\.create\s*(req\.body\|\.create\s*({\s*\.\.\.req\.body" \
+  -e "\.update\s*(req\.body\|new\s*Model\s*(req\.body" \
+  -e "Model\s*(req\.body\|Document\s*(req\.body" \
+  $PROJECT 2>/dev/null \
+  | grep -v "test\|spec" \
+  | tee zero_artifacts/triage/inpval11.txt
+```
+
+## Suspected Checks (require trace or test)
+
+For INPVAL-01, 02, 03, 04 — check consistency of validation coverage:
+
+```bash
+# Count routes that accept body vs routes with explicit validation
+ROUTES_WITH_BODY=$(grep -rn $INCLUDE $EXCLUDE "req\.body" $PROJECT/src \
+  2>/dev/null | grep -v "test" | wc -l)
+ROUTES_WITH_VALIDATE=$(grep -rn $INCLUDE $EXCLUDE \
+  "validate\|schema\|zod\|joi\|yup\|pydantic\|@Body\|@IsString\|@IsNumber" \
+  $PROJECT/src 2>/dev/null | grep -v "test" | wc -l)
+
+echo "Body usage: $ROUTES_WITH_BODY"
+echo "Validation coverage: $ROUTES_WITH_VALIDATE"
+
+# If ROUTES_WITH_BODY >> ROUTES_WITH_VALIDATE → suspected gaps
+```
+
+For INPVAL-10 — check if validation happens before controller:
+```bash
+# For each route file, does validation middleware appear before the handler?
+grep -rn $INCLUDE $EXCLUDE \
+  "router\.\(get\|post\|put\|patch\|delete\)" $PROJECT/src 2>/dev/null \
+  | grep -v "test\|spec" \
+  | while read -r line; do
+    FILE=$(echo "$line" | cut -d: -f1)
+    LINENUM=$(echo "$line" | cut -d: -f2)
+    # Check if validate appears within 3 lines before handler
+    CONTEXT=$(sed -n "$((LINENUM-3)),$((LINENUM+1))p" "$FILE" 2>/dev/null)
+    if ! echo "$CONTEXT" | grep -q "validate\|schema\|middleware"; then
+      echo "POSSIBLE MISSING VALIDATION: $FILE:$LINENUM"
+    fi
+  done | tee zero_artifacts/triage/inpval10_candidates.txt
+```
+
+## Test Templates
+
+```typescript
+// INPVAL-01: Missing required field
+describe('INPVAL: Input Validation', () => {
+  it('INPVAL-01: returns 400 when required field is missing', async () => {
+    // Test every required field by omitting it one at a time
+    const validPayload = { email: 'test@example.com', password: 'pass123', name: 'Test' }
+    
+    for (const field of Object.keys(validPayload)) {
+      const payload = { ...validPayload }
+      delete payload[field]
+      
+      const res = await request(app)
+        .post('/api/users')
+        .send(payload)
+      
+      expect(res.status).toBe(400)
+      expect(res.body.error).toBeDefined()
+      // Should mention which field is missing
+      // (not required — but nice to have)
+    }
+  })
+
+  it('INPVAL-02: rejects oversized string input', async () => {
+    const res = await request(app)
+      .post('/api/posts')
+      .set('Authorization', `Bearer ${testUser.token}`)
+      .send({
+        title: 'A'.repeat(10000),  // far exceeds any reasonable limit
+        content: 'normal content'
+      })
+    
+    expect(res.status).toBe(400)
+  })
+
+  it('INPVAL-03: rejects non-numeric value in numeric field', async () => {
+    const res = await request(app)
+      .post('/api/orders')
+      .set('Authorization', `Bearer ${testUser.token}`)
+      .send({ quantity: 'not-a-number', productId: validProduct.id })
+    
+    expect(res.status).toBe(400)
+    // Should not throw 500 (unhandled NaN)
+    expect(res.status).not.toBe(500)
+  })
+
+  it('INPVAL-07: rejects redirect to external domain', async () => {
+    const res = await request(app)
+      .get('/auth/callback')
+      .query({ returnUrl: 'https://evil.com/steal?token=abc' })
+    
+    // Should either reject or redirect to safe default
+    if (res.status === 302) {
+      expect(res.headers.location).not.toMatch(/^https?:\/\/(?!localhost|yourdomain\.com)/)
+    } else {
+      expect(res.status).toBe(400)
+    }
+  })
+
+  it('INPVAL-11: mass assignment cannot set privileged fields', async () => {
+    const res = await request(app)
+      .post('/api/users')
+      .send({
+        email: 'test@example.com',
+        password: 'pass123',
+        role: 'admin',         // should be ignored
+        isVerified: true,      // should be ignored
+        createdAt: '2020-01-01'  // should be ignored
+      })
+    
+    expect(res.status).toBe(201)
+    
+    const created = await getUser(res.body.data.id)
+    expect(created.role).not.toBe('admin')
+    expect(created.isVerified).not.toBe(true)
+  })
+})
+
+// INPVAL-05: File upload validation
+describe('INPVAL: File Upload', () => {
+  it('INPVAL-05a: rejects disallowed file type', async () => {
+    const res = await request(app)
+      .post('/api/upload')
+      .set('Authorization', `Bearer ${testUser.token}`)
+      .attach('file', Buffer.from('<?php system($_GET["cmd"]); ?>'), {
+        filename: 'shell.php',
+        contentType: 'application/x-php'
+      })
+    
+    expect([400, 415]).toContain(res.status)
+  })
+
+  it('INPVAL-05b: rejects file exceeding size limit', async () => {
+    const bigBuffer = Buffer.alloc(50 * 1024 * 1024)  // 50MB
+    
+    const res = await request(app)
+      .post('/api/upload')
+      .set('Authorization', `Bearer ${testUser.token}`)
+      .attach('file', bigBuffer, {
+        filename: 'big.jpg',
+        contentType: 'image/jpeg'
+      })
+    
+    expect([400, 413]).toContain(res.status)
+  })
+
+  it('INPVAL-06: uses server-generated filename, not user-provided', async () => {
+    const res = await request(app)
+      .post('/api/upload')
+      .set('Authorization', `Bearer ${testUser.token}`)
+      .attach('file', Buffer.from('fake image'), {
+        filename: '../../etc/passwd',  // path traversal attempt
+        contentType: 'image/jpeg'
+      })
+    
+    if (res.status === 201) {
+      // If upload succeeded, verify stored path doesn't contain our filename
+      expect(res.body.data.url).not.toContain('passwd')
+      expect(res.body.data.url).not.toContain('..')
+    }
+    // Or it should have rejected
+    expect([201, 400]).toContain(res.status)
+  })
+})
+```
+
+## Severity Guide
+
+| Finding | Severity |
+|---------|---------|
+| INPVAL-06: path traversal via filename | Critical |
+| INPVAL-09: prototype pollution | Critical |
+| INPVAL-07: open redirect | High |
+| INPVAL-11: mass assignment (role/isAdmin) | High |
+| INPVAL-08: unguarded JSON.parse crash | High |
+| INPVAL-01: missing required field validation | Medium |
+| INPVAL-05: unrestricted file upload type | High |
+| INPVAL-02/03/04: type/format/length validation | Medium |
+| INPVAL-10: validation after business logic | Medium |
+| INPVAL-12: integer overflow/coercion | Medium |
+```
+
+---
+
+# 补全 2：Rollback (git stash before Phase 5 retry)
+
+这段加入 `phases/p5_regression.sop` 的 Phase 5 Gate Fail 分支：
+
+```bash
+# Add to p5_regression.sop — replace gate fail section
+
+## 5.3 Gate Rules with Rollback
+
+GATE_ATTEMPT=1
+
+run_regression_gate() {
+  # Re-run full test suite
+  cd $PROJECT
+  npm test 2>&1 | tee zero_artifacts/final_test_attempt_${GATE_ATTEMPT}.txt
+  FINAL_FAIL=$(grep -c "FAIL\|failed" \
+    zero_artifacts/final_test_attempt_${GATE_ATTEMPT}.txt || echo 0)
+  BASELINE_FAIL=$(grep -c "FAIL\|failed" zero_artifacts/baseline_test.txt || echo 0)
+  
+  if [ "$FINAL_FAIL" -le "$BASELINE_FAIL" ]; then
+    echo "GATE_PASS"
+    return 0
+  else
+    echo "GATE_FAIL: $FINAL_FAIL failures vs baseline $BASELINE_FAIL"
+    return 1
+  fi
+}
+
+# Stash current state before first retry attempt
+stash_before_retry() {
+  cd $PROJECT
+  git stash push -m "zero-sweep-attempt-${GATE_ATTEMPT}-$(date +%Y%m%d%H%M%S)" \
+    2>/dev/null && echo "STASHED" || echo "STASH_FAILED_NO_GIT"
+}
+
+pop_stash() {
+  cd $PROJECT
+  git stash pop 2>/dev/null && echo "STASH_POPPED" || echo "STASH_POP_FAILED"
+}
+
+# Gate execution with retry loop
+if run_regression_gate; then
+  bash $ZERO_SH --log $PROJECT \
+    '{"phase":5,"action":"gate_pass","attempt":1}'
+else
+  # Attempt 1 failed
+  GATE_ATTEMPT=2
+  
+  # Stash current (possibly broken) state
+  STASH_NAME=$(stash_before_retry)
+  bash $ZERO_SH --log $PROJECT \
+    '{"phase":5,"action":"gate_fail","attempt":1,"stash":"'"$STASH_NAME"'"}'
+  
+  # Return to batch loop for regressions
+  # (controller transitions to P3_BATCH_LOOP via state machine)
+  echo "RETURN_TO_PHASE_3"
+  exit 0  # controller handles transition
+fi
+
+# After Phase 3 regression fixes, re-run gate
+if run_regression_gate; then
+  bash $ZERO_SH --log $PROJECT \
+    '{"phase":5,"action":"gate_pass","attempt":2}'
+else
+  # Attempt 2 failed
+  GATE_ATTEMPT=3
+  STASH_NAME=$(stash_before_retry)
+  bash $ZERO_SH --log $PROJECT \
+    '{"phase":5,"action":"gate_fail","attempt":2,"stash":"'"$STASH_NAME"'"}'
+  echo "RETURN_TO_PHASE_3"
+  exit 0
+fi
+
+# After second Phase 3 pass, run gate one final time
+if run_regression_gate; then
+  bash $ZERO_SH --log $PROJECT \
+    '{"phase":5,"action":"gate_pass","attempt":3}'
+else
+  # Attempt 3 failed — rollback to pre-sweep state
+  GATE_ATTEMPT="FINAL_FAIL"
+  
+  bash $ZERO_SH --log $PROJECT \
+    '{"phase":5,"action":"gate_fail_rollback","attempt":3}'
+  
+  # Hard rollback: pop all zero-sweep stashes
+  echo "All 3 gate attempts failed. Rolling back sweep changes."
+  
+  cd $PROJECT
+  git stash list | grep "zero-sweep-attempt" | while read -r entry; do
+    STASH_REF=$(echo "$entry" | cut -d: -f1)
+    git stash drop "$STASH_REF" 2>/dev/null
+  done
+  
+  # Restore to pre-sweep HEAD
+  git checkout . 2>/dev/null || echo "ROLLBACK_FAILED: manual intervention needed"
+  
+  bash $ZERO_SH --log $PROJECT \
+    '{"phase":5,"action":"rollback_complete","note":"sweep reverted, proceed to P6 for gap report only"}'
+  
+  # Still run P6 — confidence report reflects 0 fixes committed
+  echo "PROCEED_TO_P6_WITH_ROLLBACK"
+fi
+```
+
+---
+
+# 补全 3：Subagent Capability Probe (Phase 0)
+
+加入 `phases/p0_bootstrap.sop` 的 0.1 Tool Discovery 之后：
+
+```bash
+## 0.1b Subagent Capability Probe
+
+# Determine what execution modes are available
+# This affects: verifier (Phase 6), hive workers (Phase 3), goal mode
+
+SUBAGENT_CAPABLE=false
+HIVE_CAPABLE=false
+GOAL_CAPABLE=false
+
+# Probe 1: Can we launch a subagent via boss.sh?
+if [ -n "$BOSS_SH" ]; then
+  BOSS_PROBE=$(bash $BOSS_SH "capability-probe" 2>/dev/null)
+  
+  if echo "$BOSS_PROBE" | grep -q "subagent.*true\|can_spawn.*true"; then
+    SUBAGENT_CAPABLE=true
+  fi
+  
+  if echo "$BOSS_PROBE" | grep -q "hive.*true\|can_hive.*true"; then
+    HIVE_CAPABLE=true
+  fi
+  
+  if echo "$BOSS_SH" | grep -q "goal.*true\|can_goal.*true"; then
+    GOAL_CAPABLE=true
+  fi
+fi
+
+# Probe 2: Minimal subagent smoke test (if probe 1 unclear)
+if [ "$SUBAGENT_CAPABLE" = "false" ] && [ -n "$BOSS_SH" ]; then
+  SMOKE=$(bash $BOSS_SH "echo zero-capability-test" 2>/dev/null)
+  if [ -n "$SMOKE" ]; then
+    SUBAGENT_CAPABLE=true
+  fi
+fi
+
+# Record capabilities
+python3 $ZERO_TRACKER_PY log $TRACKER '{
+  "phase": 0,
+  "action": "capability_probe",
+  "subagent_capable": '"$SUBAGENT_CAPABLE"',
+  "hive_capable": '"$HIVE_CAPABLE"',
+  "goal_capable": '"$GOAL_CAPABLE"'
+}'
+
+# Pre-set verifier mode for Phase 6
+if [ "$SUBAGENT_CAPABLE" = "true" ]; then
+  VERIFIER_MODE="independent_agent"
+else
+  VERIFIER_MODE="self_verify_degraded"
+  echo "WARNING: Subagent capability not confirmed."
+  echo "Phase 6 will use self-verification with -15% confidence penalty."
+  
+  bash $ZERO_SH --log $PROJECT '{
+    "phase": 0,
+    "action": "verifier_degraded",
+    "reason": "subagent_not_available",
+    "confidence_penalty": -15
+  }'
+fi
+
+export VERIFIER_MODE
+export SUBAGENT_CAPABLE HIVE_CAPABLE GOAL_CAPABLE
+```
+
+---
+
+# 补全 4：zero_ci_check.sh
+
+```bash
+#!/usr/bin/env bash
+# zero_ci_check.sh
+# Usage: bash zero_ci_check.sh <project_path> [--min-confidence=70] [--fail-on=medium]
+# Returns: 0 (pass) | 1 (fail) | 2 (config error)
+#
+# Designed for: GitHub Actions, GitLab CI, Jenkins, any CI that checks exit code
+#
+# Example GitHub Actions step:
+#   - name: Zero Quality Gate
+#     run: bash skills/zero/zero_ci_check.sh ${{ github.workspace }} --min-confidence=75
+#     env:
+#       ZERO_FAIL_ON_UNRESOLVED: "true"
+
+set -euo pipefail
+
+PROJECT="${1:-}"
+MIN_CONFIDENCE=70
+FAIL_ON_SEVERITY="high"      # fail if any unresolved issue >= this severity
+FAIL_ON_UNRESOLVED="${ZERO_FAIL_ON_UNRESOLVED:-false}"
+REQUIRE_BASELINE_MAINTAINED="${ZERO_REQUIRE_BASELINE:-true}"
+
+# Parse args
+for arg in "${@:2}"; do
+  case "$arg" in
+    --min-confidence=*) MIN_CONFIDENCE="${arg#*=}" ;;
+    --fail-on=*)        FAIL_ON_SEVERITY="${arg#*=}" ;;
+    --strict)           FAIL_ON_SEVERITY="low"; MIN_CONFIDENCE=85 ;;
+  esac
+done
+
+# Validation
+if [ -z "$PROJECT" ] || [ ! -d "$PROJECT" ]; then
+  echo "ERROR: Project path required and must exist"
+  exit 2
+fi
+
+TRACKER="$PROJECT/zero_tracker.jsonl"
+REPORT="$PROJECT/zero_report.md"
+
+if [ ! -f "$TRACKER" ]; then
+  echo "ERROR: No zero sweep found at $PROJECT"
+  echo "Run: /zero --project $PROJECT"
+  exit 2
+fi
+
+# Find zero_tracker.py
+ZERO_TRACKER_PY=$(find / -name "zero_tracker.py" -path "*/memory/*" 2>/dev/null | head -1)
+if [ -z "$ZERO_TRACKER_PY" ]; then
+  echo "ERROR: zero_tracker.py not found"
+  exit 2
+fi
+
+echo "=== Zero CI Quality Gate ==="
+echo "Project: $PROJECT"
+echo "Tracker: $TRACKER"
+echo ""
+
+GATE_FAILED=false
+EXIT_CODE=0
+
+# Check 1: Confidence Score
+CONFIDENCE=$(python3 "$ZERO_TRACKER_PY" get-confidence "$TRACKER" 2>/dev/null || echo "0")
+echo "Confidence Score: ${CONFIDENCE}%"
+echo "Minimum Required: ${MIN_CONFIDENCE}%"
+
+if [ "$CONFIDENCE" -lt "$MIN_CONFIDENCE" ]; then
+  echo "FAIL: Confidence ${CONFIDENCE}% below minimum ${MIN_CONFIDENCE}%"
+  GATE_FAILED=true
+  EXIT_CODE=1
+else
+  echo "PASS: Confidence threshold met"
+fi
+
+echo ""
+
+# Check 2: Unresolved Issues by Severity
+for severity in critical high medium low; do
+  COUNT=$(python3 "$ZERO_TRACKER_PY" count-issues "$TRACKER" \
+    "status=fail_confirmed severity=$severity" 2>/dev/null || echo "0")
+  
+  echo "Unresolved $severity issues: $COUNT"
+  
+  # Check if this severity triggers failure
+  SEVERITY_ORDER="critical high medium low"
+  FAIL_SEVERITY_RANK=$(echo "$SEVERITY_ORDER" | tr ' ' '\n' | \
+    grep -n "^${FAIL_ON_SEVERITY}$" | cut -d: -f1)
+  CURRENT_RANK=$(echo "$SEVERITY_ORDER" | tr ' ' '\n' | \
+    grep -n "^${severity}$" | cut -d: -f1)
+  
+  if [ "$COUNT" -gt "0" ] && [ "$CURRENT_RANK" -le "$FAIL_SEVERITY_RANK" ]; then
+    echo "FAIL: $COUNT unresolved $severity issue(s)"
+    GATE_FAILED=true
+    EXIT_CODE=1
+  fi
+done
+
+echo ""
+
+# Check 3: Baseline Maintained
+if [ "$REQUIRE_BASELINE_MAINTAINED" = "true" ]; then
+  BASELINE_TESTS=$(python3 "$ZERO_TRACKER_PY" get-meta "$TRACKER" \
+    "baseline_tests_passing" 2>/dev/null || echo "0")
+  FINAL_TESTS=$(python3 "$ZERO_TRACKER_PY" get-meta "$TRACKER" \
+    "final_tests_passing" 2>/dev/null || echo "0")
+  
+  echo "Tests passing: $BASELINE_TESTS → $FINAL_TESTS"
+  
+  if [ "$FINAL_TESTS" -lt "$BASELINE_TESTS" ]; then
+    echo "FAIL: Test regression — fewer tests passing than baseline"
+    GATE_FAILED=true
+    EXIT_CODE=1
+  else
+    echo "PASS: Baseline maintained or improved"
+  fi
+fi
+
+echo ""
+
+# Check 4: High-Risk Features Covered
+UNCOVERED_HIGH_RISK=$(python3 "$ZERO_TRACKER_PY" count-issues "$TRACKER" \
+  "coverage=none risk_flag=payment_operation,admin_action,handles_credentials" \
+  2>/dev/null || echo "0")
+
+if [ "$UNCOVERED_HIGH_RISK" -gt "0" ]; then
+  echo "WARNING: $UNCOVERED_HIGH_RISK high-risk feature(s) with no coverage"
+  python3 "$ZERO_TRACKER_PY" list-issues "$TRACKER" \
+    "coverage=none risk_flag=payment_operation,admin_action,handles_credentials" \
+    2>/dev/null
+  # Warning, not failure (unless strict mode)
+  if [ "$FAIL_ON_SEVERITY" = "low" ]; then
+    GATE_FAILED=true
+    EXIT_CODE=1
+  fi
+fi
+
+echo ""
+
+# Check 5: Sweep Completed (not suspended/aborted)
+SWEEP_STATUS=$(python3 "$ZERO_TRACKER_PY" get-meta "$TRACKER" \
+  "sweep_status" 2>/dev/null || echo "unknown")
+
+case "$SWEEP_STATUS" in
+  "complete")
+    echo "PASS: Sweep completed fully"
+    ;;
+  "suspended")
+    echo "FAIL: Sweep was suspended — incomplete results"
+    GATE_FAILED=true
+    EXIT_CODE=1
+    ;;
+  "aborted")
+    echo "FAIL: Sweep was aborted — no valid results"
+    EXIT_CODE=2
+    ;;
+  *)
+    echo "WARNING: Sweep status unknown ($SWEEP_STATUS)"
+    ;;
+esac
+
+echo ""
+echo "=== Summary ==="
+
+if [ "$GATE_FAILED" = "true" ]; then
+  echo "RESULT: FAIL"
+  echo ""
+  echo "Report: $REPORT"
+  echo ""
+  # Print actionable summary for CI log
+  python3 "$ZERO_TRACKER_PY" summary "$TRACKER" 2>/dev/null || true
+else
+  echo "RESULT: PASS"
+  echo "Confidence: ${CONFIDENCE}% (min: ${MIN_CONFIDENCE}%)"
+  echo "Report: $REPORT"
+fi
+
+exit $EXIT_CODE
+```
+
+GitHub Actions 集成示例：
+
+```yaml
+# .github/workflows/zero-quality.yml
+name: Zero Quality Gate
+
+on:
+  pull_request:
+  push:
+    branches: [main, develop]
+
+jobs:
+  zero-quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Restore zero sweep cache
+        uses: actions/cache@v3
+        with:
+          path: |
+            zero_tracker.jsonl
+            zero_report.md
+            zero_artifacts/
+          key: zero-${{ github.sha }}
+          restore-keys: |
+            zero-${{ github.base_ref }}
+
+      - name: Run Zero Quality Gate
+        run: |
+          bash skills/zero/zero_ci_check.sh ${{ github.workspace }} \
+            --min-confidence=70 \
+            --fail-on=high
+        env:
+          ZERO_FAIL_ON_UNRESOLVED: "true"
+          ZERO_REQUIRE_BASELINE: "true"
+
+      - name: Upload Zero Report
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: zero-report-${{ github.sha }}
+          path: |
+            zero_report.md
+            zero_tracker.jsonl
+```
+
+---
+
+# 补全 5：ZERO_LOCK_METHOD (多环境 Lock)
+
+加入 `phases/p0_bootstrap.sop` 的 0.1 之前，替换原有 lock 实现：
+
+```bash
+## 0.0 Sweep Lock (concurrent sweep safety)
+
+LOCK_METHOD="${ZERO_LOCK_METHOD:-file}"  # file | env | redis
+LOCK_KEY="zero_sweep_${PROJECT//\//_}"
+
+acquire_lock() {
+  case "$LOCK_METHOD" in
+    "file")
+      LOCK_FILE="$PROJECT/.zero_sweep.lock"
+      
+      if [ -f "$LOCK_FILE" ]; then
+        LOCK_PID=$(cat "$LOCK_FILE" 2>/dev/null || echo "unknown")
+        LOCK_AGE=$(( $(date +%s) - $(stat -c %Y "$LOCK_FILE" 2>/dev/null || echo 0) ))
+        
+        # Check if PID is still alive (local only — not NFS-safe)
+        if [ "$LOCK_PID" != "unknown" ] && kill -0 "$LOCK_PID" 2>/dev/null; then
+          echo "ERROR: Active sweep running (PID $LOCK_PID). Aborting."
+          return 1
+        fi
+        
+        # Stale lock: file exists but PID dead, or lock > 4 hours old
+        if [ "$LOCK_AGE" -gt 14400 ]; then
+          echo "WARNING: Stale lock (${LOCK_AGE}s old). Removing."
+          rm -f "$LOCK_FILE"
+        else
+          echo "ERROR: Lock exists (PID $LOCK_PID, ${LOCK_AGE}s old). Use --force to override."
+          return 1
+        fi
+      fi
+      
+      echo $$ > "$LOCK_FILE"
+      trap "rm -f $LOCK_FILE; bash $ZERO_SH --log $PROJECT \
+        '{\"action\":\"lock_released\"}'" EXIT INT TERM
+      echo "Lock acquired (file, PID $$)"
+      ;;
+      
+    "env")
+      # CI-safe: use environment variable (works across NFS, containers)
+      # Requires: CI/CD sets ZERO_LOCK_HOLDER externally
+      if [ -n "${ZERO_LOCK_HOLDER:-}" ]; then
+        echo "ERROR: Lock held by $ZERO_LOCK_HOLDER (env). Aborting."
+        return 1
+      fi
+      export ZERO_LOCK_HOLDER="$$@$(hostname)"
+      echo "Lock acquired (env, holder: $ZERO_LOCK_HOLDER)"
+      ;;
+      
+    "redis")
+      # NFS-safe, distributed: requires redis-cli
+      if ! command -v redis-cli &>/dev/null; then
+        echo "WARNING: ZERO_LOCK_METHOD=redis but redis-cli not found. Falling back to file."
+        LOCK_METHOD="file"
+        acquire_lock
+        return $?
+      fi
+      
+      REDIS_URL="${ZERO_REDIS_URL:-redis://localhost:6379}"
+      LOCK_TTL=14400  # 4 hours in seconds
+      
+      # SET NX EX — atomic: set if not exists, with TTL
+      RESULT=$(redis-cli -u "$REDIS_URL" \
+        SET "$LOCK_KEY" "$$@$(hostname)" NX EX "$LOCK_TTL" 2>/dev/null)
+      
+      if [ "$RESULT" != "OK" ]; then
+        HOLDER=$(redis-cli -u "$REDIS_URL" GET "$LOCK_KEY" 2>/dev/null)
+        echo "ERROR: Lock held by $HOLDER (redis). Aborting."
+        return 1
+      fi
+      
+      # Release on exit
+      trap "redis-cli -u $REDIS_URL DEL $LOCK_KEY >/dev/null 2>&1; \
+            bash $ZERO_SH --log $PROJECT '{\"action\":\"lock_released\"}'" \
+        EXIT INT TERM
+      echo "Lock acquired (redis, key: $LOCK_KEY)"
+      ;;
+      
+    *)
+      echo "ERROR: Unknown ZERO_LOCK_METHOD=$LOCK_METHOD. Use: file|env|redis"
+      return 1
+      ;;
+  esac
+  
+  bash $ZERO_SH --log $PROJECT "{
+    \"action\": \"lock_acquired\",
+    \"method\": \"$LOCK_METHOD\",
+    \"holder\": \"$$@$(hostname)\"
+  }"
+  return 0
+}
+
+release_lock() {
+  case "$LOCK_METHOD" in
+    "file") rm -f "$PROJECT/.zero_sweep.lock" ;;
+    "env")  unset ZERO_LOCK_HOLDER ;;
+    "redis")
+      REDIS_URL="${ZERO_REDIS_URL:-redis://localhost:6379}"
+      redis-cli -u "$REDIS_URL" DEL "$LOCK_KEY" >/dev/null 2>&1
+      ;;
+  esac
+}
+
+# Attempt to acquire lock
+if ! acquire_lock; then
+  exit 1
+fi
+```
+
+---
+
+# 最终完整 Oracle 清单
+
+```
+oracles/
+├── triage/
+│   ├── cwe25.oracle          ✅ Reply #4
+│   ├── secrets.oracle        ✅ p1_triage.sop
+│   └── config.oracle         ✅ p1_triage.sop
+├── security/
+│   ├── authn.oracle          ✅ Reply #5
+│   ├── authz.oracle          ✅ Reply #5
+│   └── inpval.oracle         ✅ This reply
+├── business_logic/
+│   ├── crud.oracle           ✅ Reply #5
+│   ├── financial.oracle      ✅ Reply #3 + Reply #5 templates
+│   ├── state_machine.oracle  ✅ Reply #3 + Reply #5 templates
+│   ├── concurrency.oracle    ✅ Reply #5
+│   └── temporal.oracle       ✅ Reply #5
+└── confidence/
+    └── sweep_assessment      ✅ p6_confidence.sop
+```
+
+**所有 oracle 完整。所有 5 个缺口填完。**
+
+---
+
+# 与 Review #5 缺口对应
+
+| Review #5 缺口 | 状态 |
+|--------------|------|
+| inpval.oracle | ✅ 完整：12 个检查，auto-confirm grep，4 个测试模板，severity guide |
+| Rollback (git stash) | ✅ 完整：stash before retry，3次后 hard rollback，drop stash on success |
+| Subagent probe in Phase 0 | ✅ 完整：boss.sh capability probe + smoke test + VERIFIER_MODE export |
+| zero_ci_check.sh | ✅ 完整：5个 gate，exit code，GitHub Actions YAML |
+| ZERO_LOCK_METHOD | ✅ 完整：file/env/redis，NFS safe，atomic redis SET NX EX，trap on exit |

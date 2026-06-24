@@ -1,0 +1,1335 @@
+明白了。Review #3 的结论很清晰：
+
+**架构对了，但有三个根本问题需要解决：**
+1. Token budget — 2447 行 SOP 在做任何实际工作前就消耗 35%+ context
+2. 没有 cross-sweep learning — 每次从零开始，不记录历史经验
+3. 没有 independent verification gate — AI 自己写测试、自己跑、自己判断结果
+
+这次我按照 review 的建议做结构性重写，不是再加内容。
+
+---
+
+# 架构原则（这次严格遵守）
+
+```
+Controller:     ≤200 lines  — 只做调度，不做内容
+Per-phase SOP:  ≤150 lines each — 按需加载
+Oracle files:   ≤100 lines each — 工具命令优先
+Lessons:        从历史 sweep 注入，不是静态内容
+Verification:   独立 agent 做最终验证，不是自验
+```
+
+---
+
+# 文件结构
+
+```
+memory/
+├── zero.sh                          # 已有
+├── zero_tracker.py                  # 已有
+├── boss.sh                          # 已有
+│
+skills/zero/
+├── zero_controller.sop              # ≤200 lines — 主控
+├── phases/
+│   ├── p0_bootstrap.sop             # ≤150 lines
+│   ├── p1_triage.sop                # ≤150 lines
+│   ├── p2_inventory.sop             # ≤150 lines
+│   ├── p3_batch_loop.sop            # ≤150 lines
+│   ├── p4_business_logic.sop        # ≤150 lines
+│   ├── p5_regression.sop            # ≤100 lines
+│   └── p6_confidence.sop            # ≤100 lines
+│
+├── oracles/
+│   ├── triage/
+│   │   ├── cwe25.oracle             # grep commands only
+│   │   ├── secrets.oracle           # grep commands only
+│   │   └── config.oracle            # grep commands only
+│   ├── security/
+│   │   ├── authn.oracle
+│   │   ├── authz.oracle
+│   │   └── inpval.oracle
+│   ├── business_logic/
+│   │   ├── crud.oracle
+│   │   ├── financial.oracle
+│   │   ├── state_machine.oracle
+│   │   ├── concurrency.oracle
+│   │   └── temporal.oracle
+│   └── test_templates/
+│       ├── auth_bypass.tmpl
+│       ├── idor.tmpl
+│       ├── state_machine.tmpl
+│       ├── financial.tmpl
+│       └── concurrency.tmpl
+│
+└── zero_lessons.jsonl               # cross-sweep memory (persistent)
+```
+
+---
+
+# zero_controller.sop
+
+```markdown
+---
+type: sop
+title: "Zero Controller"
+version: 4
+max_lines: 200
+load_policy: always
+---
+
+# Zero Controller
+
+You orchestrate a quality sweep. You do NOT execute phases directly.
+You load the correct phase SOP, execute it, checkpoint, then load the next.
+
+One phase SOP in context at a time. Unload before loading next.
+
+## Non-Negotiable Rules
+
+1. No PASS without objective evidence (tool output / test result)
+2. No confirmed BUG without reproduction (failing test / traced data flow / static finding)
+3. Suspected = grep hit not yet traced. Must trace before confirming or clearing.
+4. Never hold sweep state in context only — write to tracker after every action
+5. Final verification must be run by a separate agent instance (not self)
+6. Confidence score must include explicit gap statement
+
+## Execution Sequence
+
+```
+Phase 0: Bootstrap
+  → Load p0_bootstrap.sop
+  → Execute fully
+  → Write repo_facts + baseline to tracker
+  → Unload p0_bootstrap.sop
+
+Phase 1: Triage
+  → Load p1_triage.sop + relevant oracles/triage/*.oracle
+  → Execute fully  
+  → Write all suspected_issues to tracker
+  → Unload
+
+Phase 2: Feature Inventory
+  → Load p2_inventory.sop
+  → Execute fully
+  → Write all feature records + oracle assignments to tracker
+  → Decide mode (call boss.sh or apply heuristic)
+  → Unload
+
+Phase 3: Batch Loop (repeat until all batches done)
+  → Load p3_batch_loop.sop + relevant oracle files for this batch
+  → Execute one batch
+  → Write all results to tracker
+  → Unload
+  → Next batch
+
+Phase 4: Business Logic Audit
+  → Load p4_business_logic.sop + relevant business_logic/*.oracle
+  → Execute per subsystem
+  → Write findings to tracker
+  → Unload
+
+Phase 5: Regression Gate
+  → Load p5_regression.sop
+  → Execute
+  → Write final test results to tracker
+  → Unload
+
+Phase 6: Confidence + Verification
+  → Load p6_confidence.sop
+  → Compute confidence score
+  → Launch SEPARATE AGENT for independent verification
+  → Write final report
+  → Sync lessons
+```
+
+## Mode Decision (after Phase 2)
+
+Call boss.sh:
+```bash
+bash $BOSS_SH "zero audit: files=$FILE_COUNT features=$FEATURE_COUNT \
+  stack=$STACK tests_exist=$TEST_COUNT mode=evidence-driven"
+```
+
+Fallback if boss unavailable:
+- ≤15 features: direct
+- 16-50 features: conductor  
+- >50 features: conductor + hive
+- Long unattended run: add goal
+
+## Checkpoint Format (write after every phase)
+
+```bash
+bash $ZERO_SH --log $PROJECT '{"phase": N, "action": "phase_complete", 
+  "features_processed": N, "issues_found": N, "time_elapsed": "Xm"}'
+```
+
+## Context Budget Management
+
+If context is approaching limit mid-phase:
+1. Write current state to tracker immediately
+2. Output: "CHECKPOINT: Phase N, batch M complete. Resuming in next context."
+3. On resume: read tracker to reconstruct state, continue from checkpoint
+
+## Lessons Injection (Phase 0 reads this)
+
+Before starting any phase, inject relevant lessons:
+```bash
+# Load lessons relevant to this project's stack
+grep "$STACK\|general" memory/zero_lessons.jsonl | tail -20
+```
+
+Use lessons to:
+- Skip known false positive patterns
+- Prioritize oracle checks that have historically found bugs
+- Adjust confidence weights for known unreliable oracles
+```
+
+---
+
+# phases/p0_bootstrap.sop
+
+```markdown
+---
+type: phase-sop
+phase: 0
+title: "Bootstrap"
+max_lines: 150
+load_policy: on-demand
+---
+
+# Phase 0: Bootstrap
+
+## 0.1 Tool Discovery
+
+Find and verify each tool. Record path or MISSING.
+
+```bash
+# Find tools — search common locations
+for tool in zero.sh zero_tracker.py boss.sh; do
+  find / -name "$tool" -path "*/memory/*" 2>/dev/null | head -1
+done
+
+# Find codegraph
+which codegraph_files codegraph_query codegraph_callers \
+  codegraph_callees codegraph_impact 2>/dev/null
+
+# Find optional docs tool
+find / -name "find_docs.py" -path "*/okf*" 2>/dev/null | head -1
+```
+
+Verify each found tool responds:
+```bash
+bash $ZERO_SH --help 2>/dev/null || head -5 $ZERO_SH
+python3 $ZERO_TRACKER_PY --help 2>/dev/null || head -5 $ZERO_TRACKER_PY
+```
+
+**Degraded modes** (record in tracker, adjust confidence later):
+- No codegraph → use grep for route/symbol discovery (note: lower coverage)
+- No boss.sh → apply heuristic mode selection
+- No zero.sh → use zero_tracker.py directly
+- No find_docs.py → skip doc cross-reference
+
+## 0.2 Initialize Artifacts
+
+```bash
+bash $ZERO_SH --init $PROJECT
+mkdir -p $PROJECT/zero_artifacts/{triage,batches,tests,repro}
+```
+
+## 0.3 Load Cross-Sweep Lessons
+
+```bash
+# Inject relevant lessons from previous sweeps
+grep -i "$STACK\|general" memory/zero_lessons.jsonl 2>/dev/null | tail -20
+```
+
+Apply lessons immediately:
+- Known false positive patterns → skip those grep checks
+- Oracle effectiveness history → prioritize high-signal oracles
+- Previous gap areas → add to Phase 2 priority list
+
+## 0.4 Collect Repo Facts (commands only, no interpretation yet)
+
+```bash
+# Structure
+find $PROJECT -type f -not -path "*/.git/*" -not -path "*/node_modules/*" | wc -l
+find $PROJECT -type f -not -path "*/.git/*" -not -path "*/node_modules/*" \
+  | sed 's/.*\.//' | sort | uniq -c | sort -rn | head -15
+
+# Stack detection
+[ -f $PROJECT/package.json ] && cat $PROJECT/package.json | \
+  python3 -c "import json,sys; d=json.load(sys.stdin); \
+  print(list({**d.get('dependencies',{}), **d.get('devDependencies',{})}.keys()))"
+[ -f $PROJECT/requirements.txt ] && cat $PROJECT/requirements.txt
+[ -f $PROJECT/go.mod ] && head -10 $PROJECT/go.mod
+[ -f $PROJECT/Cargo.toml ] && head -10 $PROJECT/Cargo.toml
+
+# Test infrastructure
+find $PROJECT -name "*.test.*" -o -name "*.spec.*" 2>/dev/null | \
+  grep -v node_modules | wc -l
+find $PROJECT -name "jest.config*" -o -name "vitest.config*" \
+  -o -name "pytest.ini" -o -name "conftest.py" 2>/dev/null | \
+  grep -v node_modules
+
+# CI
+find $PROJECT -name "*.yml" -path "*/.github/*" 2>/dev/null
+[ -f $PROJECT/Makefile ] && grep "^test\|^lint\|^check" $PROJECT/Makefile
+```
+
+Write all to tracker as `repo_facts`.
+
+## 0.5 Run Baseline (mandatory — do not skip)
+
+Detect stack and run appropriate commands:
+
+**JS/TS:**
+```bash
+cd $PROJECT
+npm test -- --passWithNoTests 2>&1 | tee zero_artifacts/baseline_test.txt; echo "EXIT:$?"
+npx tsc --noEmit 2>&1 | tee zero_artifacts/baseline_typecheck.txt; echo "EXIT:$?"
+npx eslint . --max-warnings=9999 2>&1 | tee zero_artifacts/baseline_lint.txt; echo "EXIT:$?"
+npm audit --json 2>&1 | tee zero_artifacts/baseline_audit.txt
+```
+
+**Python:**
+```bash
+cd $PROJECT
+python -m pytest --tb=no -q 2>&1 | tee zero_artifacts/baseline_test.txt; echo "EXIT:$?"
+python -m mypy . 2>&1 | tee zero_artifacts/baseline_typecheck.txt; echo "EXIT:$?"
+python -m ruff check . 2>&1 | tee zero_artifacts/baseline_lint.txt; echo "EXIT:$?"
+pip-audit 2>&1 | tee zero_artifacts/baseline_audit.txt
+```
+
+**Go:**
+```bash
+cd $PROJECT
+go test ./... 2>&1 | tee zero_artifacts/baseline_test.txt; echo "EXIT:$?"
+golangci-lint run 2>&1 | tee zero_artifacts/baseline_lint.txt; echo "EXIT:$?"
+govulncheck ./... 2>&1 | tee zero_artifacts/baseline_audit.txt
+```
+
+**Rust:**
+```bash
+cd $PROJECT
+cargo test 2>&1 | tee zero_artifacts/baseline_test.txt; echo "EXIT:$?"
+cargo clippy 2>&1 | tee zero_artifacts/baseline_lint.txt; echo "EXIT:$?"
+cargo audit 2>&1 | tee zero_artifacts/baseline_audit.txt
+```
+
+Extract and record:
+```bash
+# Parse test results
+grep -c "PASS\|passed\|ok" zero_artifacts/baseline_test.txt || echo "0"
+grep -c "FAIL\|failed\|error" zero_artifacts/baseline_test.txt || echo "0"
+grep -c "HIGH\|CRITICAL\|high\|critical" zero_artifacts/baseline_audit.txt || echo "0"
+```
+
+Write to tracker:
+```bash
+python3 $ZERO_TRACKER_PY log $TRACKER '{
+  "phase": 0,
+  "action": "baseline_captured",
+  "tests_passing": N,
+  "tests_failing": K,
+  "typecheck_errors": M,
+  "lint_warnings": P,
+  "high_cves": Q,
+  "degraded_tools": ["list if any"]
+}'
+```
+
+**If baseline tests fail:** Record as pre-existing failures. Do not treat as new issues.
+**If environment blocked (no DB, no deps):** Mark `blocked_environment`, note what is missing, continue.
+
+## Phase 0 Exit Criteria
+
+Write to tracker before unloading:
+- [ ] All tool paths recorded (found or MISSING)
+- [ ] Degraded modes documented
+- [ ] Lessons injected
+- [ ] Repo facts captured
+- [ ] Baseline captured (even if commands failed — capture the failure)
+```
+
+---
+
+# phases/p1_triage.sop
+
+```markdown
+---
+type: phase-sop
+phase: 1
+title: "Triage — Tool-Based Fast Scan"
+max_lines: 150
+load_policy: on-demand
+oracles_to_load: [triage/cwe25, triage/secrets, triage/config]
+---
+
+# Phase 1: Triage
+
+## Purpose
+
+Run automated checks. Fast. No human reasoning.
+Every hit is a `suspected_issue`, not a confirmed bug.
+Confirmation happens in Phase 3 via data flow trace.
+
+## Language Adaptation
+
+Set these before running any commands based on Phase 0 repo facts:
+
+```bash
+# JS/TS project
+INCLUDE="--include=*.ts --include=*.js --include=*.tsx --include=*.jsx"
+EXCLUDE="--exclude-dir=node_modules --exclude-dir=dist --exclude-dir=build --exclude-dir=.git"
+
+# Python project  
+INCLUDE="--include=*.py"
+EXCLUDE="--exclude-dir=.venv --exclude-dir=__pycache__ --exclude-dir=.git"
+
+# Go project
+INCLUDE="--include=*.go"
+EXCLUDE="--exclude-dir=vendor --exclude-dir=.git"
+
+# Rust project
+INCLUDE="--include=*.rs"
+EXCLUDE="--exclude-dir=target --exclude-dir=.git"
+```
+
+## 1.1 Load and Run CWE25 Oracle
+
+Load `oracles/triage/cwe25.oracle`.
+Run each command. Capture to `zero_artifacts/triage/`.
+For each hit, create `suspected_issue` record.
+
+## 1.2 Run Secrets Detection
+
+```bash
+grep -rn $INCLUDE $EXCLUDE \
+  -e "password\s*=\s*['\"][^'\"]\{3,\}" \
+  -e "api_key\s*=\s*['\"][^'\"]\{8,\}" \
+  -e "secret\s*=\s*['\"][^'\"]\{8,\}" \
+  -e "private_key\s*=\s*['\"]" \
+  -e "sk_live_[0-9a-zA-Z]\{20,\}" \
+  -e "sk_test_[0-9a-zA-Z]\{20,\}" \
+  -e "AKIA[0-9A-Z]\{16\}" \
+  -e "-----BEGIN.*PRIVATE KEY" \
+  -e "ghp_[0-9a-zA-Z]\{36\}" \
+  $PROJECT 2>/dev/null \
+  | grep -v "\.env\.example\|\.env\.sample\|test\|spec\|mock\|fixture" \
+  | tee zero_artifacts/triage/secrets_raw.txt
+
+# Count and record
+wc -l zero_artifacts/triage/secrets_raw.txt
+```
+
+Secrets hits = **automatically confirmed** (no trace needed).
+Create confirmed `bug` record for each unique secret location.
+
+## 1.3 Run Config Checks
+
+```bash
+# CORS wildcard
+grep -rn $INCLUDE $EXCLUDE \
+  "origin.*['\"\`]\*['\"\`]\|cors.*\*\|Access-Control-Allow-Origin.*\*" \
+  $PROJECT 2>/dev/null | tee zero_artifacts/triage/cors_raw.txt
+
+# Debug/dev flags in non-dev config
+grep -rn $INCLUDE $EXCLUDE \
+  "DEBUG.*=.*true\|debug.*=.*true" \
+  $PROJECT 2>/dev/null \
+  | grep -v "\.env\.example\|test\|spec" \
+  | tee zero_artifacts/triage/debug_flags.txt
+
+# HTTP in non-local URLs
+grep -rn $INCLUDE $EXCLUDE \
+  "http://[^/]" \
+  $PROJECT 2>/dev/null \
+  | grep -v "localhost\|127\.0\.0\.1\|0\.0\.0\.0\|example\.com\|test\|spec\|mock" \
+  | tee zero_artifacts/triage/http_urls.txt
+
+# Security headers presence check (JS/TS)
+grep -rn $INCLUDE $EXCLUDE \
+  "helmet\|X-Frame-Options\|Content-Security-Policy\|X-Content-Type-Options" \
+  $PROJECT 2>/dev/null | tee zero_artifacts/triage/security_headers.txt
+# If zero results → suspected missing security headers
+```
+
+## 1.4 Parse Dependency Audit
+
+```bash
+# Extract high/critical CVEs from baseline_audit.txt
+grep -i "high\|critical\|GHSA-\|CVE-" zero_artifacts/baseline_audit.txt \
+  | tee zero_artifacts/triage/cves.txt
+```
+
+Each CVE = confirmed issue (tool-produced, no trace needed).
+
+## 1.5 Apply Lessons (false positive suppression)
+
+Load lessons from `memory/zero_lessons.jsonl`:
+```bash
+grep "false_positive\|known_safe" memory/zero_lessons.jsonl 2>/dev/null
+```
+
+For each known false positive pattern → filter from triage results.
+Do NOT create suspected_issue for patterns the lessons say are safe.
+
+## 1.6 Write Triage Summary to Tracker
+
+```bash
+python3 $ZERO_TRACKER_PY log $TRACKER '{
+  "phase": 1,
+  "action": "triage_complete",
+  "grep_total_hits": N,
+  "secrets_confirmed": K,
+  "cves_confirmed": M,
+  "suspected_issues_created": P,
+  "false_positives_suppressed_by_lessons": Q
+}'
+```
+
+Write each suspected_issue to tracker with:
+- `cwe_id` or category
+- `grep_pattern` matched
+- `file_line`
+- `status: suspected`
+- `needs_trace: true`
+
+## Phase 1 Exit Criteria
+- [ ] All oracle commands ran (or documented why not)
+- [ ] All hits recorded as suspected_issue (not confirmed)
+- [ ] Secrets and CVEs recorded as confirmed bug
+- [ ] Lessons applied to suppress known false positives
+- [ ] Summary counts written to tracker
+```
+
+---
+
+# phases/p2_inventory.sop
+
+```markdown
+---
+type: phase-sop
+phase: 2
+title: "Feature Inventory"
+max_lines: 150
+load_policy: on-demand
+---
+
+# Phase 2: Feature Inventory
+
+## Purpose
+
+Enumerate every testable surface. Assign oracle strategy.
+Build automated attack surface matrix. Do NOT test yet.
+
+## 2.1 Route/Endpoint Discovery
+
+```bash
+# Primary: codegraph (if available)
+codegraph_query "route|router|api|controller|handler|endpoint" 2>/dev/null \
+  | tee zero_artifacts/routes_codegraph.txt
+
+# Fallback / supplement: grep (always run)
+grep -rn $INCLUDE $EXCLUDE \
+  -e "app\.\(get\|post\|put\|patch\|delete\|options\)" \
+  -e "router\.\(get\|post\|put\|patch\|delete\)" \
+  -e "@Get\|@Post\|@Put\|@Delete\|@Patch\|@Controller" \
+  -e "@app\.route\|@blueprint\.route\|path('.*'," \
+  -e "http\.HandleFunc\|r\.GET\|r\.POST\|r\.PUT" \
+  $PROJECT 2>/dev/null \
+  | tee zero_artifacts/routes_grep.txt
+
+# Supplement: file-path-based discovery
+find $PROJECT -type f \( \
+  -path "*/routes/*" -o -path "*/controllers/*" -o \
+  -path "*/handlers/*" -o -path "*/api/*" -o \
+  -path "*/pages/api/*" -o -path "*/views/*" \
+  \) -not -path "*/node_modules/*" -not -path "*/.git/*" \
+  | tee zero_artifacts/route_files.txt
+```
+
+## 2.2 Model/Schema Discovery
+
+```bash
+# Primary: codegraph
+codegraph_query "model|schema|entity|migration|table" 2>/dev/null
+
+# Fallback: grep
+grep -rn $INCLUDE $EXCLUDE \
+  -e "class.*Model\|extends.*Model\|@Entity\|@Table" \
+  -e "Schema\s*=\s*new\|mongoose\.model\|sequelize\.define" \
+  -e "class.*models\.Model\|db\.Model" \
+  $PROJECT 2>/dev/null
+```
+
+## 2.3 Background Job Discovery
+
+```bash
+grep -rn $INCLUDE $EXCLUDE \
+  -e "cron\|schedule\|setInterval\|setTimeout.*[0-9]\{4,\}" \
+  -e "Queue\|Worker\|Bull\|Celery\|Sidekiq\|DelayedJob" \
+  -e "job\|task" \
+  $PROJECT 2>/dev/null | grep -v "node_modules\|test\|spec"
+```
+
+## 2.4 Integration Discovery
+
+```bash
+grep -rn $INCLUDE $EXCLUDE \
+  -e "stripe\|paypal\|braintree\|twilio\|sendgrid\|mailgun" \
+  -e "s3\|cloudinary\|cloudflare\|firebase\|supabase" \
+  -e "fetch\s*(\|axios\.\|requests\.get\|http\.get" \
+  $PROJECT 2>/dev/null | grep -v "node_modules\|test\|spec"
+```
+
+## 2.5 Auto-Apply Risk Flags
+
+For each discovered route/feature, apply heuristics:
+
+```python
+# Risk flag rules (apply in sequence, cumulative)
+flags = []
+
+if route_has_no_auth_middleware:
+    flags.append("public_endpoint")   # weight: 3
+
+if any(kw in route_path for kw in ['password','token','secret','auth','login','reset']):
+    flags.append("handles_credentials")  # weight: 3
+
+if any(kw in route_path for kw in ['admin','internal','manage','dashboard']):
+    flags.append("admin_action")  # weight: 3
+
+if any(svc in imports for svc in ['stripe','paypal','payment','billing','charge']):
+    flags.append("payment_operation")  # weight: 3
+
+if any(kw in route_handler for kw in ['upload','multer','s3','blob','file']):
+    flags.append("file_operation")  # weight: 2
+
+if ':id' in route_path and any(m in handler for m in ['find','get','fetch']):
+    flags.append("idor_candidate")  # weight: 2
+
+if any(op in handler for op in ['create','save','update','delete','destroy']):
+    flags.append("database_write")  # weight: 2
+
+if any(kw in handler for kw in ['fetch(','axios.','requests.']):
+    flags.append("external_call")  # weight: 2
+```
+
+## 2.6 Assign Oracle Strategy per Feature
+
+Based on risk flags, assign:
+
+| Risk Flags Present | Primary Oracle | Secondary Oracle |
+|-------------------|---------------|-----------------|
+| handles_credentials | security/authn.oracle | test_templates/auth_bypass.tmpl |
+| idor_candidate | test_templates/idor.tmpl | security/authz.oracle |
+| payment_operation | business_logic/financial.oracle | test_templates/financial.tmpl |
+| admin_action | security/authz.oracle | test_templates/auth_bypass.tmpl |
+| file_operation | security/inpval.oracle | — |
+| database_write | business_logic/crud.oracle | — |
+| public_endpoint (any) | security/authn.oracle | — |
+| none | existing_test or code_review | — |
+
+If existing tests already cover this feature → mark `existing_test` as primary oracle.
+
+## 2.7 Define Execution Batches
+
+Group features into batches for Phase 3:
+- Batch by subsystem (auth, payments, users, admin, etc.)
+- Aim for 5-10 features per batch
+- Put high-risk features first within each batch
+- Note: features sharing code_location should be in same batch
+
+## 2.8 Write Feature Records
+
+```bash
+python3 $ZERO_TRACKER_PY add $TRACKER '{
+  "id": "F001",
+  "name": "User login",
+  "surface": {"route": "POST /api/auth/login", "handler": "AuthController.login"},
+  "risk_flags": ["public_endpoint", "handles_credentials"],
+  "oracle_plan": ["security/authn", "test_templates/auth_bypass"],
+  "code_location": ["src/controllers/auth.ts:14"],
+  "batch": "batch_01_auth",
+  "priority": "high",
+  "suspected_issues_from_triage": ["I-001", "I-003"],
+  "status": "discovered"
+}'
+```
+
+## Phase 2 Exit Criteria
+- [ ] All routes/endpoints discovered and recorded
+- [ ] All models/schemas recorded
+- [ ] All background jobs recorded
+- [ ] All integrations recorded
+- [ ] Risk flags applied to every feature
+- [ ] Oracle plan assigned to every feature
+- [ ] Batches defined and ordered
+- [ ] Feature count written to tracker
+- [ ] Mode decision made (boss.sh called or heuristic applied)
+```
+
+---
+
+# phases/p3_batch_loop.sop
+
+```markdown
+---
+type: phase-sop
+phase: 3
+title: "Batch Loop: Diagnose → Test → Fix → Verify"
+max_lines: 150
+load_policy: on-demand, per-batch
+note: "Load this SOP once per batch. Load only the oracle files assigned to this batch's features."
+---
+
+# Phase 3: Batch Execution
+
+Input: batch_id, list of feature_ids, their oracle_plans, their suspected_issues
+
+## 3.1 Confirm or Clear Triage Hits
+
+For every suspected_issue linked to this batch's features:
+
+```bash
+# Trace data flow: does user input reach the flagged sink?
+codegraph_callers "<flagged_function>" 2>/dev/null
+
+# Fallback: manual trace
+# Open flagged file:line
+# Answer: where does the input come from?
+#   - req.body / req.params / req.query / req.headers → CONFIRMED (user-controlled)
+#   - internal function / trusted service → CLEAR (false positive)
+#   - config / env var → depends (clear if not user-controlled)
+```
+
+Update tracker immediately:
+- Confirmed: change status from `suspected` to `confirmed`, add `taint_path`
+- Cleared: change status to `false_positive`, add reason
+
+```bash
+bash $ZERO_SH --lessons $PROJECT '{
+  "category": "project",
+  "lesson": "Pattern X at location Y is false positive because Z"
+}'
+```
+
+## 3.2 Run Existing Tests for This Batch
+
+```bash
+# Scope to this batch's subsystem
+npm test -- --testPathPattern="<subsystem>" 2>&1 \
+  | tee zero_artifacts/batches/$BATCH_ID/existing_tests.txt
+
+# Python
+pytest tests/<subsystem>/ -v 2>&1 \
+  | tee zero_artifacts/batches/$BATCH_ID/existing_tests.txt
+```
+
+Record which features have existing test coverage.
+Mark features without coverage as `needs_generated_test`.
+
+## 3.3 Generate Tests for Uncovered Features
+
+Load the template from `oracles/test_templates/<template>.tmpl` for each feature.
+
+**Critical rules for test generation:**
+- Tests must be self-contained (no dependency on other generated tests)
+- Tests must be runnable with the project's existing test framework
+- Tests must have concrete assertions (not `expect(result).toBeTruthy()`)
+- Each test must target exactly ONE behavior from expected_behavior
+
+Minimum tests to generate per feature based on oracle plan:
+- auth_bypass.tmpl → generates: no-token test, wrong-token test, expired-token test, wrong-role test
+- idor.tmpl → generates: cross-user access test, cross-user modify test, cross-user delete test  
+- financial.tmpl → generates: concurrent-charge test, over-refund test, negative-amount test
+- state_machine.tmpl → generates: invalid-transition test, terminal-state test, concurrent-transition test
+
+```bash
+# Save generated test
+cat > zero_artifacts/batches/$BATCH_ID/tests/test_$FEATURE_ID.test.ts << 'TESTEOF'
+<generated test code>
+TESTEOF
+
+# Run it immediately
+npx jest zero_artifacts/batches/$BATCH_ID/tests/test_$FEATURE_ID.test.ts \
+  2>&1 | tee zero_artifacts/batches/$BATCH_ID/tests/test_$FEATURE_ID.result.txt
+echo "EXIT:$?"
+```
+
+## 3.4 Record Confirmed Bugs
+
+Only record as `confirmed` if:
+- existing test fails (exit code non-zero, FAIL in output)
+- generated test fails (assertion failure, not setup error)
+- static tool finding (from Phase 1 triage, now trace-confirmed)
+- runtime repro command demonstrates incorrect behavior
+
+A setup error (can't connect to DB, missing env) is NOT a bug confirmation.
+
+Required fields per confirmed bug:
+```json
+{
+  "issue_id": "I-014",
+  "feature_id": "F003",
+  "category": "security|business_logic|code_quality|config",
+  "severity": "critical|high|medium|low",
+  "confidence": "confirmed",
+  "title": "...",
+  "expected": "...",
+  "actual": "...",
+  "evidence_type": "existing_test_fail|generated_test_fail|static_finding|trace_confirmed",
+  "evidence_artifact": "zero_artifacts/batches/...",
+  "reproduce_cmd": "exact command",
+  "taint_path": "req.body.X → func Y → sink Z (no check)",
+  "location": "file:line"
+}
+```
+
+## 3.5 Fix Confirmed Issues
+
+Before any fix:
+```bash
+codegraph_impact "<function_to_change>" 2>/dev/null \
+  | tee zero_artifacts/batches/$BATCH_ID/impact_$ISSUE_ID.txt
+```
+
+Record all impacted features. Flag them for regression.
+
+Fix rules:
+- Minimum change only
+- No refactoring
+- No opportunistic improvements
+- New bugs found while fixing → add to tracker, fix after this batch completes
+
+## 3.6 Verify Fix (Mandatory)
+
+```bash
+# Re-run the exact failing command/test
+<reproduce_cmd from bug record>
+
+# Re-run ALL tests in this batch (not just impacted — fixing shared code can affect anything)
+npm test -- --testPathPattern="<subsystem>" 2>&1 \
+  | tee zero_artifacts/batches/$BATCH_ID/post_fix_tests.txt
+
+# Re-run impacted feature tests
+for feature in <impacted_features>:
+  npm test -- --testPathPattern="<feature_pattern>"
+```
+
+Status outcomes:
+- `verified`: original failing oracle now passes, no new failures in batch
+- `fix_failed`: original oracle still fails
+- `regressed`: new test failures appeared that weren't there before fix
+
+If `regressed`: add regression as confirmed bug, include `caused_by: <issue_id>`.
+Fix regressions before moving to next batch.
+
+## 3.7 Feature Final Status Update
+
+```bash
+python3 $ZERO_TRACKER_PY update $TRACKER $FEATURE_ID \
+  status <pass_evidenced|verified|fail_confirmed|blocked_environment|needs_oracle> \
+  evidence_type <type> \
+  evidence_artifact <path>
+```
+
+## Phase 3 Batch Exit Criteria
+- [ ] All suspected_issues for this batch: confirmed or cleared
+- [ ] All features: have oracle result recorded
+- [ ] All confirmed bugs: have evidence_artifact path
+- [ ] All fixes: verified with re-run of original failing oracle
+- [ ] All regressions: resolved before batch marked complete
+- [ ] All feature statuses: updated in tracker
+- [ ] Impact of fixes: recorded (for Phase 5 regression scope)
+```
+
+---
+
+# phases/p4_business_logic.sop
+
+```markdown
+---
+type: phase-sop
+phase: 4
+title: "Business Logic Audit"
+max_lines: 150
+load_policy: on-demand
+note: "Load only the specific oracle files relevant to this project's domain."
+---
+
+# Phase 4: Business Logic Audit
+
+## Purpose
+
+Security tests catch known patterns.
+Business logic bugs are domain-specific and require reasoning about WHAT SHOULD HAPPEN.
+This phase applies the "Domain Auditor" mindset.
+
+## 4.0 Determine Applicable Oracles
+
+Based on repo facts and features discovered:
+
+| Condition | Load Oracle |
+|-----------|------------|
+| Any CRUD routes exist | business_logic/crud.oracle |
+| Any payment/billing features | business_logic/financial.oracle |
+| Any status/state fields in models | business_logic/state_machine.oracle |
+| Any concurrent operations (queue, parallel) | business_logic/concurrency.oracle |
+| Any time-based logic (expiry, scheduling) | business_logic/temporal.oracle |
+
+Load ONLY applicable oracles. Do not load all five if not needed.
+
+## 4.1 Oracle Self-Validation (mandatory before proceeding)
+
+Before running any oracle checks, validate the oracle is applicable:
+
+**For state_machine.oracle:**
+```bash
+grep -rn "status\|state" $PROJECT/src $INCLUDE $EXCLUDE | head -10
+```
+→ If zero results: oracle not applicable, skip
+→ If results: identify at least 3 distinct state values before proceeding
+
+**For financial.oracle:**
+```bash
+grep -rn "price\|amount\|charge\|payment" $PROJECT/src $INCLUDE $EXCLUDE | head -10
+```
+→ If zero results: oracle not applicable, skip
+→ If results: identify the currency handling approach before proceeding
+
+**For concurrency.oracle:**
+```bash
+grep -rn "Promise\.all\|async.*async\|queue\|transaction" $PROJECT/src $INCLUDE $EXCLUDE | head -10
+```
+→ If zero results: likely low concurrency concern, note and skip
+→ If results: proceed
+
+## 4.2 Execute Oracle Checks
+
+Load the applicable oracle file. Execute each check in order:
+1. Discovery grep (find relevant code)
+2. Check template (what to verify)
+3. Generate test if gap found
+4. Run test
+5. Record result
+
+Oracle files contain the specific grep commands and test templates.
+Use language-appropriate commands based on Phase 0 stack detection.
+
+## 4.3 Self-Check: Did We Understand the State Machine Correctly?
+
+After running discovery greps for state machine:
+
+Before generating tests, explicitly state:
+- "I found N states: [list them]"
+- "I found M transitions: [list them]"
+- "The terminal states are: [list them]"
+- "Transitions I could NOT find in code: [list them]"
+
+If you cannot answer all four questions from the grep output → the code is too complex
+for oracle-based testing at this point → mark as `needs_manual_domain_review`.
+
+This self-check prevents misparse propagation.
+
+## 4.4 CRUD Audit (if applicable)
+
+For each model with create/update/delete operations:
+
+```bash
+# Find all handlers that modify this model
+codegraph_callers "<Model.create>" 2>/dev/null || \
+grep -rn "Model\.create\|\.save(\|\.update(\|\.delete(\|\.destroy(" \
+  $PROJECT/src $INCLUDE $EXCLUDE
+
+# Find ownership checks near those handlers
+# Expected: find userId/ownerId comparison before the mutation
+# Absent: suspected IDOR or missing ownership check
+```
+
+Checks to verify (use grep evidence, then trace):
+- [ ] Ownership verified before mutation
+- [ ] Soft-deleted records excluded from list queries
+- [ ] Multi-operation sequences use transactions
+- [ ] Cascade behavior matches domain expectation
+
+## 4.5 Generate Business Logic Tests
+
+Tests generated here follow same rules as Phase 3:
+- Self-contained
+- Concrete assertions
+- One behavior per test
+
+Save to `zero_artifacts/business_logic/tests/`
+Run immediately, capture output.
+Record results in tracker.
+
+## 4.6 Write Findings
+
+Same process as Phase 3: suspected → trace → confirmed → fix → verify.
+
+## Phase 4 Exit Criteria
+- [ ] Applicable oracles identified and justified
+- [ ] Oracle self-validation passed before execution
+- [ ] All checks executed with grep evidence
+- [ ] Generated tests ran and results captured
+- [ ] Findings recorded with evidence_artifact
+- [ ] Features with no applicable oracle: explicitly marked
+```
+
+---
+
+# phases/p5_regression.sop
+
+```markdown
+---
+type: phase-sop
+phase: 5
+title: "Global Regression Gate"
+max_lines: 100
+load_policy: on-demand
+---
+
+# Phase 5: Regression Gate
+
+## Purpose
+
+Verify the sweep did not degrade baseline quality.
+Every fix in Phase 3-4 must leave the project in better or equal state.
+
+## 5.1 Re-run Full Test Suite
+
+```bash
+cd $PROJECT
+npm test 2>&1 | tee zero_artifacts/final_test.txt; echo "EXIT:$?"
+npx tsc --noEmit 2>&1 | tee zero_artifacts/final_typecheck.txt; echo "EXIT:$?"
+npx eslint . --max-warnings=9999 2>&1 | tee zero_artifacts/final_lint.txt
+npm audit --json 2>&1 | tee zero_artifacts/final_audit.txt
+```
+
+## 5.2 Compare Against Baseline
+
+```bash
+# Test delta
+BASELINE_PASS=$(grep -c "PASS\|passed\|ok" zero_artifacts/baseline_test.txt || echo 0)
+FINAL_PASS=$(grep -c "PASS\|passed\|ok" zero_artifacts/final_test.txt || echo 0)
+BASELINE_FAIL=$(grep -c "FAIL\|failed" zero_artifacts/baseline_test.txt || echo 0)
+FINAL_FAIL=$(grep -c "FAIL\|failed" zero_artifacts/final_test.txt || echo 0)
+
+echo "Tests: $BASELINE_PASS → $FINAL_PASS passing"
+echo "Failures: $BASELINE_FAIL → $FINAL_FAIL failing"
+
+# Typecheck delta
+BASELINE_TC=$(wc -l < zero_artifacts/baseline_typecheck.txt)
+FINAL_TC=$(wc -l < zero_artifacts/final_typecheck.txt)
+echo "Typecheck lines: $BASELINE_TC → $FINAL_TC"
+```
+
+## 5.3 Gate Rules
+
+**PASS gate (all must hold):**
+- `FINAL_FAIL ≤ BASELINE_FAIL` — did not introduce new test failures
+- `FINAL_TC ≤ BASELINE_TC + 5` — did not introduce significant new typecheck errors
+- New lint errors ≤ 0 relative to baseline
+
+**If gate fails:**
+- Identify which tests newly failed (diff outputs)
+- Match to recent fixes in Phase 3-4 tracker records
+- Return to batch loop for those features only
+- Re-verify after fix
+- Max 3 regression iterations before marking as `unresolvable`
+
+## 5.4 Identify Tests to Commit
+
+Generated tests that:
+- Found a real bug (evidence_type = generated_test_fail + verified)
+- Are now passing after fix
+- Have concrete assertions
+
+→ These should be committed to the repo's actual test suite (not just zero_artifacts)
+
+```bash
+# Move worthy generated tests to project test directory
+cp zero_artifacts/batches/*/tests/test_*.test.ts $PROJECT/src/__tests__/zero_generated/
+```
+
+## Phase 5 Exit Criteria
+- [ ] Full test suite re-run completed
+- [ ] Baseline comparison computed
+- [ ] Gate rules evaluated
+- [ ] Regression failures resolved or marked unresolvable
+- [ ] Tests to commit identified
+```
+
+---
+
+# phases/p6_confidence.sop
+
+```markdown
+---
+type: phase-sop
+phase: 6
+title: "Confidence Assessment + Independent Verification"
+max_lines: 100
+load_policy: on-demand
+---
+
+# Phase 6: Confidence Assessment
+
+## 6.1 Compute Coverage Metrics
+
+```bash
+python3 $ZERO_TRACKER_PY stats $TRACKER
+```
+
+Classify each feature by best oracle used:
+
+| Classification | Criteria |
+|---------------|---------|
+| full | Existing test passed + generated test ran |
+| high | Generated test ran (pass or fail→fixed) |
+| medium | Trace-confirmed grep finding |
+| low | Grep only (not traced) OR manual inspection |
+| none | Blocked or no oracle built |
+
+## 6.2 Compute Risk-Weighted Confidence Score
+
+```python
+WEIGHTS = {
+    "public_endpoint": 3, "handles_credentials": 3,
+    "admin_action": 3, "payment_operation": 3,
+    "file_operation": 2, "idor_candidate": 2,
+    "database_write": 2, "external_call": 2,
+    "background_job": 1, "other": 1
+}
+ORACLE_SCORES = {
+    "full": 1.0, "high": 0.85,
+    "medium": 0.6, "low": 0.3, "none": 0.0
+}
+# Apply: score = sum(weight_i * oracle_score_i) / sum(weight_i) * 100
+```
+
+## 6.3 Mandatory Gap Statement
+
+Explicitly list:
+- Features with `none` coverage: [list + reason]
+- Features marked `blocked_environment`: [list + what was missing]
+- Features marked `needs_manual_domain_review`: [list + why]
+- Oracle checks skipped due to degraded tools: [list]
+
+"No gaps found" is only valid if every feature has `high` or `full` coverage.
+
+## 6.4 Update Lessons
+
+```bash
+# Record patterns that produced real bugs
+bash $ZERO_SH --lessons $PROJECT '{
+  "category": "project|general",
+  "oracle": "<oracle_name>",
+  "lesson": "...",
+  "false_positive_rate": "low|medium|high",
+  "signal_quality": "high|medium|low"
+}'
+
+bash $ZERO_SH --sync-lessons $PROJECT
+```
+
+## 6.5 Independent Verification (mandatory)
+
+**Launch a separate agent instance.** Do NOT self-verify.
+
+The independent agent receives only:
+- Project path
+- zero_tracker.jsonl (read-only)
+- List of features marked `verified`
+
+Its job:
+1. Re-run the `reproduce_cmd` for each `verified` bug
+2. Confirm the fix actually works
+3. Check for any features marked `pass_evidenced` where evidence seems weak
+4. Report discrepancies
+
+```bash
+# Invoke independent verifier
+# This is a separate agent/subagent call — not this agent continuing
+bash $ZERO_SH --log $PROJECT '{"phase": 6, "action": "independent_verification_launched"}'
+```
+
+If independent verifier finds discrepancies:
+- Downgrade confidence score by 10% per discrepancy
+- Return affected features to Phase 3
+
+## 6.6 Generate Final Report
+
+```bash
+bash $ZERO_SH --report $PROJECT
+```
+
+Report must include:
+- Repo facts summary
+- Mode used and why
+- Baseline vs final test/typecheck/lint counts
+- Total features: discovered / tested / passed / fixed / unresolved
+- Confirmed bugs: by category and severity
+- Confidence score: with formula inputs shown
+- Explicit gap statement
+- Tests committed to repo
+- Lessons added
+- Permanent automation recommendations (what to add to CI)
+
+## Phase 6 Exit Criteria
+- [ ] Coverage metrics computed for every feature
+- [ ] Risk-weighted confidence score calculated and shown
+- [ ] Gap statement written (not empty)
+- [ ] Lessons recorded and synced
+- [ ] Independent verification launched and result received
+- [ ] Final report generated
+```
+
+---
+
+# oracle 文件示例（完整，可直接使用）
+
+## oracles/triage/cwe25.oracle
+
+```markdown
+---
+type: oracle
+category: triage
+id: cwe25
+title: "CWE Top 25 Grep Patterns"
+confidence: low (grep only — all hits are suspected, require trace)
+---
+
+# CWE25 Triage Oracle
+
+All commands use $INCLUDE $EXCLUDE $PROJECT variables set in Phase 1.
+
+## CWE-79: XSS
+```bash
+grep -rn $INCLUDE $EXCLUDE \
+  -e "dangerouslySetInnerHTML" \
+  -e "v-html\s*=" \
+  -e "innerHTML\s*=" \
+  -e "document\.write\s*(" \
+  -e "|safe\b\|mark_safe\|raw(" \
+  $PROJECT 2>/dev/null | tee zero_artifacts/triage/cwe79.txt
+```
+Note: Hits in test/fixture files are likely false positives.
+Hits with DOMPurify/sanitize adjacent → likely false positive, trace to confirm.
+
+## CWE-89: SQL Injection
+```bash
+grep -rn $INCLUDE $EXCLUDE \
+  -e "query\s*(\s*['\`].*\$[{(]" \
+  -e "execute\s*(\s*['\`].*\$[{(]" \
+  -e "SELECT.*\+\|INSERT.*\+\|UPDATE.*\+\|DELETE.*\+" \
+  -e "\.where(\s*['\`][^']*\$\|\.where(\s*[\""][^\"]*\$" \
+  -e "f['\"]SELECT\|f['\"]INSERT\|f['\"]UPDATE\|f['\"]DELETE" \
+  $PROJECT 2>/dev/null | tee zero_artifacts/triage/cwe89.txt
+```
+
+## CWE-78: OS Command Injection
+```bash
+grep -rn $INCLUDE $EXCLUDE \
+  -e "exec\s*(\|spawn\s*(\|execSync\s*(" \
+  -e "system\s*(\|popen\s*(\|subprocess\." \
+  -e "child_process\|os\.system\|os\.popen" \
+  $PROJECT 2>/dev/null \
+  | grep -v "node_modules\|test\|spec\|__pycache__" \
+  | tee zero_artifacts/triage/cwe78.txt
+```
+
+## CWE-22: Path Traversal
+```bash
+grep -rn $INCLUDE $EXCLUDE \
+  -e "readFile\s*(\|open\s*(\|path\.join\s*(" \
+  -e "fs\.\(read\|write\|append\)" \
+  $PROJECT 2>/dev/null \
+  | grep -v "test\|spec\|fixture" \
+  | tee zero_artifacts/triage/cwe22_raw.txt
+
+# Then check if user input is nearby:
+grep -rn $INCLUDE $EXCLUDE "req\.\(body\|params\|query\)" \
+  $(grep -l "readFile\|path\.join" $(grep -rl "req\." $PROJECT/src)) \
+  2>/dev/null | head -20 | tee zero_artifacts/triage/cwe22_colocated.txt
+```
+
+## CWE-862: Missing Authorization
+```bash
+# Find route definitions without auth middleware nearby
+grep -rn $INCLUDE $EXCLUDE \
+  "router\.\(get\|post\|put\|patch\|delete\)\|app\.\(get\|post\|put\|patch\|delete\)" \
+  $PROJECT 2>/dev/null \
+  | grep -v "authenticate\|authorize\|authMiddleware\|requireAuth\|isLoggedIn\|protect" \
+  | tee zero_artifacts/triage/cwe862_candidates.txt
+```
+Note: High false positive rate — middleware may be applied at router level, not route level.
+Trace each hit with codegraph_callers to see full middleware chain.
+
+## CWE-918: SSRF
+```bash
+grep -rn $INCLUDE $EXCLUDE \
+  -e "fetch\s*(\|axios\.get\s*(\|axios\.post\s*(" \
+  -e "requests\.get\s*(\|requests\.post\s*(" \
+  -e "http\.get\s*(\|https\.get\s*(" \
+  $PROJECT 2>/dev/null \
+  | grep -v "test\|spec\|localhost\|127\.0\.0\.1\|example\.com" \
+  | tee zero_artifacts/triage/cwe918_raw.txt
+
+# Flag ones where URL may come from user input
+grep -B5 -A2 "fetch\|axios\|requests\." zero_artifacts/triage/cwe918_raw.txt \
+  | grep -l "req\.\|params\.\|query\.\|body\." 2>/dev/null \
+  | tee zero_artifacts/triage/cwe918_user_input.txt
+```
+
+## CWE-798: Hardcoded Credentials
+```bash
+# (Covered separately in secrets detection — see Phase 1.2)
+```
+
+## CWE-352: CSRF
+```bash
+# Check for CSRF protection on state-changing routes
+grep -rn $INCLUDE $EXCLUDE \
+  "csrf\|csurf\|xsrf\|_token" \
+  $PROJECT 2>/dev/null | tee zero_artifacts/triage/csrf_present.txt
+
+# If zero results → suspected missing CSRF protection
+# Check for SameSite cookie flag as alternative protection
+grep -rn $INCLUDE $EXCLUDE "sameSite\|SameSite" $PROJECT 2>/dev/null
+```
+```
+
+---
+
+# cross-sweep memory 格式
+
+## zero_lessons.jsonl 条目格式
+
+```jsonl
+{"id":"L001","created":"2026-06-24","category":"general","stack":"nodejs","oracle":"triage/cwe862","lesson":"CWE-862 grep for missing auth has 60-70% false positive rate when router-level middleware is used. Always trace full middleware chain with codegraph_callers before confirming.","false_positive_rate":"high","signal_quality":"low","action":"trace_required_before_confirm"}
+{"id":"L002","created":"2026-06-24","category":"general","stack":"any","oracle":"business_logic/financial","lesson":"Float arithmetic check (FIN-01) is high signal — any monetary calculation using parseFloat or floating point is a real bug risk. False positive rate very low.","false_positive_rate":"low","signal_quality":"high","action":"confirm_immediately_on_hit"}
+{"id":"L003","created":"2026-06-24","category":"project","project":"/path/to/app","stack":"nextjs","lesson":"This project uses tRPC — route discovery grep patterns for express/router don't apply. Use codegraph_query for 'router|procedure|mutation|query' instead.","false_positive_rate":"na","signal_quality":"na","action":"adjust_discovery_pattern"}
+{"id":"L004","created":"2026-06-24","category":"general","stack":"any","oracle":"business_logic/state_machine","lesson":"State machine self-check (list states, transitions, terminals) must complete before test generation. Projects with complex polymorphic state often have non-obvious terminal states.","false_positive_rate":"na","signal_quality":"na","action":"enforce_self_check"}
+```
+
+---
+
+这就是最终架构。以下是与 Review #3 所有问题的对应关系：
+
+| Review #3 问题 | 解决方案 |
+|---------------|---------|
+| 2447 行 token 预算耗尽 | Controller ≤200 行，每个 phase SOP ≤150 行，按需加载，用完卸载 |
+| 自验证循环 | Phase 6 强制启动独立 agent 做最终验证，不是自己验自己 |
+| 测试基础设施假设 | Phase 0 明确检测，blocked_environment 是合法状态，不是失败 |
+| 没有 cross-sweep learning | zero_lessons.jsonl 持久化，每次 sweep 开始注入历史 lessons |
+| Oracle 维护负担 | Oracle 自验证步骤（4.1），防止错误解析传播；lessons 记录 false positive rate |
+| Phase 0 工具发现脆弱 | 每个工具都有具体 degraded mode，confidence score 记录哪些工具缺失 |
+| 语言/框架特殊性 | Phase 1 设置 INCLUDE/EXCLUDE 变量，所有 oracle 命令用这些变量，不硬编码语言 |
+| Batch 隔离 | 每个 batch 有独立 artifact 目录，明确说明测试不应有跨 batch 副作用 |
+| codegraph 查询脆弱 | 三层发现：codegraph → grep → file-path，每层互补 |
+| Confidence 缺少 oracle 可靠性信号 | lessons 记录每个 oracle 的 false_positive_rate，下次 sweep 用来调整 |
+| 三种 mindset 无法强制执行 | Phase 3/4 分开，Phase 3 是 pentest/code review mindset，Phase 4 是 business logic mindset，结构上强制分离 |

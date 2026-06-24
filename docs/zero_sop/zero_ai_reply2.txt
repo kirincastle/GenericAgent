@@ -1,0 +1,322 @@
+好问题。
+
+业界确实有成熟的、结构化的 code review / penetration testing 方法论，可以直接拆解成 AI 可执行的 checklist。关键是这些方法论已经被实战验证过，不是"看着检查"，而是"按清单逐项验证"。
+
+下面我把最有价值的几个框架拆解出来，说明哪些部分适合放进 zero skill。
+
+---
+
+# 业界可参考的方法论
+
+## 1. OWASP Testing Guide (OTG) — Web 安全测试
+
+这是 penetration testing 的黄金标准。OWASP 把测试拆成了具体的 test case ID，每个都有：
+- 测试目标
+- 怎么测
+- 预期结果
+- 工具建议
+
+### 适合放进 zero 的部分
+
+```markdown
+## Security Oracle Checklist (derived from OWASP OTG v4 + ASVS v4)
+
+For each feature that handles user input, auth, or data:
+
+### Authentication (OTG-AUTHN)
+- [ ] AUTHN-001: Credentials transported over encrypted channel only
+      Test: grep/search for http:// in API calls, form actions, redirects
+      Tool: grep -rn "http://" --include="*.ts" --include="*.js" --include="*.py"
+      
+- [ ] AUTHN-002: Default credentials removed
+      Test: search for admin/admin, test/test, hardcoded passwords
+      Tool: grep -rni "password.*=.*['\"]" --include="*.ts" --include="*.js" --include="*.py" --include="*.env*"
+      
+- [ ] AUTHN-003: Weak lockout mechanism
+      Test: verify rate limiting exists on login/reset endpoints
+      Tool: generate test that sends N+1 requests, assert 429 on N+1
+      
+- [ ] AUTHN-004: Authentication bypass
+      Test: verify protected routes return 401/403 without valid token
+      Tool: curl each protected endpoint without auth header, assert non-200
+
+- [ ] AUTHN-005: Session fixation
+      Test: verify session ID changes after login
+      Tool: compare session/token before and after auth
+
+- [ ] AUTHN-006: Token expiry
+      Test: verify JWT/session has expiry, verify expired token is rejected
+      Tool: decode JWT, check exp claim; generate expired token, assert rejection
+
+### Authorization (OTG-AUTHZ)
+- [ ] AUTHZ-001: Path traversal
+      Test: try accessing /api/users/OTHER_USER_ID with normal user token
+      Tool: curl with valid token but other user's resource ID
+      
+- [ ] AUTHZ-002: Privilege escalation
+      Test: try admin actions with non-admin token
+      Tool: curl admin endpoints with regular user token
+      
+- [ ] AUTHZ-003: IDOR (Insecure Direct Object Reference)
+      Test: for every endpoint with :id param, verify ownership check exists in code
+      Tool: codegraph_callees on route handler, check for ownership/permission filter
+
+### Input Validation (OTG-INPVAL)
+- [ ] INPVAL-001: SQL Injection
+      Test: verify parameterized queries / ORM usage, no string concatenation in queries
+      Tool: grep -rn "query.*\`.*\$\{" OR grep for raw SQL with interpolation
+      
+- [ ] INPVAL-002: XSS
+      Test: verify user input is escaped before rendering
+      Tool: search for dangerouslySetInnerHTML, v-html, |safe, mark_safe, raw()
+      
+- [ ] INPVAL-003: Command Injection
+      Test: verify no user input passed to exec/spawn/system
+      Tool: grep -rn "exec\|spawn\|system\|popen\|subprocess" and trace input source
+      
+- [ ] INPVAL-004: Path Traversal
+      Test: verify file operations sanitize user-provided paths
+      Tool: grep for fs.readFile/open/fopen with user input, check for ../ filtering
+
+- [ ] INPVAL-005: Mass Assignment
+      Test: verify create/update operations whitelist allowed fields
+      Tool: check if request body is passed directly to ORM create/update without pick/whitelist
+
+### Session Management (OTG-SESS)
+- [ ] SESS-001: Cookie security flags
+      Test: verify httpOnly, secure, sameSite on auth cookies
+      Tool: grep for cookie/setCookie/set-cookie, check flags
+      
+- [ ] SESS-002: Session invalidation on logout
+      Test: verify logout actually invalidates token/session server-side
+      Tool: read logout handler code, check if token is blacklisted/deleted
+
+### Error Handling (OTG-ERR)
+- [ ] ERR-001: Stack traces exposed to user
+      Test: verify production error handler does not return stack/internal details
+      Tool: search for error middleware, check if it filters in production
+      
+- [ ] ERR-002: Verbose error messages
+      Test: verify auth errors don't distinguish "wrong password" from "user not found"
+      Tool: read error responses in auth handlers
+
+### Data Protection
+- [ ] DATA-001: Sensitive data in logs
+      Test: verify passwords, tokens, PII not logged
+      Tool: grep for console.log/logger that includes req.body or user objects
+      
+- [ ] DATA-002: Sensitive data in URL
+      Test: verify tokens, passwords not in query params
+      Tool: grep for GET routes that accept sensitive params
+      
+- [ ] DATA-003: Secrets in source code
+      Test: verify no API keys, passwords, tokens hardcoded
+      Tool: grep -rni "sk_live\|sk_test\|api_key\|secret\|password" --include="*.ts" --include="*.js" --include="*.py" | grep -v node_modules | grep -v ".env.example"
+```
+
+---
+
+## 2. Google Code Review Guidelines — Code Quality Review
+
+Google 的 code review 标准关注的不是安全，而是**代码质量、可维护性、正确性**。
+
+### 适合放进 zero 的部分
+
+```markdown
+## Code Quality Oracle Checklist (derived from Google Engineering Practices)
+
+### Correctness
+- [ ] CORRECT-001: Function does what its name says
+      Check: read function name → read implementation → do they match?
+      Evidence: if mismatch found, write a test that asserts the name's implied behavior
+      
+- [ ] CORRECT-002: Edge cases handled
+      Check: for each function, identify inputs at boundaries (null, empty, 0, max, negative)
+      Evidence: generate boundary test cases
+      
+- [ ] CORRECT-003: Error returns are checked by callers
+      Check: codegraph_callers on error-returning functions → do callers check the error?
+      Tool: for Go: grep for unchecked errors; for JS/TS: grep for unhandled promises
+      
+- [ ] CORRECT-004: Concurrency safety
+      Check: shared mutable state accessed from multiple paths?
+      Tool: search for global/module-level mutable variables; check if DB operations need transactions
+
+### Clarity
+- [ ] CLARITY-001: Dead code
+      Check: functions/exports never called
+      Tool: codegraph_callers on exported functions → if zero callers and not entry point → dead code
+      
+- [ ] CLARITY-002: Unreachable code
+      Check: code after return/throw/break
+      Tool: linter (most linters catch this)
+
+### Consistency  
+- [ ] CONSIST-001: Inconsistent error handling patterns
+      Check: some routes use try/catch, others don't; some return {error}, others throw
+      Tool: sample 5 route handlers, compare error handling patterns
+      
+- [ ] CONSIST-002: Inconsistent response formats
+      Check: some endpoints return {data: ...}, others return raw; some use 200, others 201
+      Tool: sample 5 route handlers, compare response shapes
+```
+
+---
+
+## 3. CWE Top 25 — Common Weakness Enumeration
+
+CWE 是漏洞分类标准。Top 25 是最常见的软件缺陷。很多可以用 grep / static analysis 检测。
+
+### 适合放进 zero 的部分
+
+```markdown
+## CWE Top 25 Automated Checks
+
+These can be checked with grep/search patterns, no runtime needed:
+
+| CWE | Name | Detection Pattern |
+|-----|------|------------------|
+| CWE-79 | XSS | `dangerouslySetInnerHTML`, `v-html`, `\|safe`, `mark_safe`, `innerHTML =` |
+| CWE-89 | SQL Injection | String interpolation in SQL: `` `SELECT...${` ``, `f"SELECT...{`, `"SELECT..." + var` |
+| CWE-78 | OS Command Injection | `exec()`, `spawn()`, `system()`, `popen()`, `subprocess.call()` with user input |
+| CWE-22 | Path Traversal | `fs.readFile(userInput)`, `open(userInput)` without path sanitization |
+| CWE-352 | CSRF | Forms without CSRF token, state-changing GET requests |
+| CWE-434 | Unrestricted Upload | File upload without type/size validation |
+| CWE-862 | Missing Authorization | Route handlers without auth middleware |
+| CWE-798 | Hardcoded Credentials | `password = "..."`, `apiKey = "..."`, `secret = "..."` in source |
+| CWE-918 | SSRF | `fetch(userInput)`, `axios.get(userInput)`, `requests.get(userInput)` |
+| CWE-502 | Deserialization | `JSON.parse(userInput)` without schema validation, `pickle.loads()`, `yaml.load()` |
+| CWE-611 | XXE | XML parsing without disabling external entities |
+| CWE-200 | Information Exposure | Stack traces in responses, verbose error messages, debug mode in production |
+| CWE-306 | Missing Auth for Critical Function | Admin/delete/payment endpoints without auth check |
+| CWE-269 | Improper Privilege Management | No role differentiation, all authenticated users can do everything |
+```
+
+---
+
+## 4. SANS/NIST Secure Code Review Checklist
+
+### 适合放进 zero 的部分
+
+```markdown
+## Configuration & Deployment Checks
+
+- [ ] CONFIG-001: Debug mode disabled in production
+      Tool: grep for DEBUG=true, NODE_ENV=development in non-dev configs
+      
+- [ ] CONFIG-002: CORS not wildcard in production
+      Tool: grep for "Access-Control-Allow-Origin: *" or cors({origin: '*'})
+      
+- [ ] CONFIG-003: Security headers present
+      Check: helmet / security middleware configured
+      Tool: grep for helmet, X-Frame-Options, Content-Security-Policy, HSTS
+      
+- [ ] CONFIG-004: Dependencies up to date / no known vulnerabilities
+      Tool: npm audit / pip-audit / cargo audit / bundler-audit
+      
+- [ ] CONFIG-005: .env / secrets not in git
+      Tool: check .gitignore for .env; git log --all -- "*.env" to find historical leaks
+```
+
+---
+
+## 5. Practical Pentester Workflow (PTES + real-world)
+
+真正的 pen tester 不是随意看代码。他们有一个固定的 recon → enumerate → exploit → verify 流程。
+
+### 适合放进 zero 的部分
+
+```markdown
+## Pentester Recon Phase (adapted for code review)
+
+### Attack Surface Mapping
+For each entry point discovered:
+1. What auth is required? (none / session / token / API key / mTLS)
+2. What input does it accept? (body / query / params / headers / files)
+3. What does it do with the input? (store / query / render / execute / forward)
+4. What does it return? (data / redirect / file / error)
+5. What privilege level is needed? (public / user / admin / system)
+
+This produces an attack surface matrix:
+
+| Endpoint | Auth | Input Type | Input Action | Output | Privilege | Risk |
+|----------|------|-----------|-------------|--------|-----------|------|
+| POST /api/login | none | body(email,pw) | query DB | token | public | high |
+| GET /api/users/:id | token | params(id) | query DB | user data | user | IDOR risk |
+| POST /api/upload | token | file | store to disk/S3 | URL | user | upload risk |
+| DELETE /api/admin/user/:id | token | params(id) | delete DB | 204 | admin | privesc risk |
+
+### Risk Prioritization
+Test in this order:
+1. Public endpoints (no auth required) — largest attack surface
+2. Auth endpoints (login/register/reset) — most targeted
+3. File operations (upload/download) — common exploit vector
+4. Admin endpoints — highest impact if bypassed
+5. Data query endpoints — IDOR/injection risk
+6. Integrations (webhooks, external APIs) — SSRF/injection risk
+```
+
+---
+
+# 如何集成到 Zero Skill
+
+我建议把上面这些拆成**模块化的 oracle checklist**，而不是全部塞进主 SOP。
+
+结构如下：
+
+```
+zero.sop                          ← controller prompt (你已经有了)
+zero_worker.sop                   ← worker prompt (你已经有了)
+
+zero_oracles/
+├── security_owasp.md             ← OWASP-derived checks
+├── security_cwe25.md             ← CWE Top 25 grep patterns  
+├── security_config.md            ← Config/deployment checks
+├── security_attack_surface.md    ← Pentester recon matrix
+├── code_quality_google.md        ← Google-style code review
+├── code_quality_consistency.md   ← Response/error pattern consistency
+└── framework_specific/
+    ├── nextjs.md                 ← Next.js specific checks
+    ├── express.md                ← Express specific checks
+    ├── django.md                 ← Django specific checks
+    └── ...
+```
+
+在主 SOP 里加一个 oracle selection step：
+
+```markdown
+## Oracle Selection (Phase 2, before testing)
+
+Based on repo facts collected in Phase 0:
+
+1. Always load:
+   - security_owasp.md
+   - security_cwe25.md
+   - security_config.md
+   - code_quality_google.md
+
+2. If project has web endpoints:
+   - security_attack_surface.md
+   - Build attack surface matrix for all endpoints
+
+3. Load framework-specific oracle:
+   - Match detected framework → load matching checklist
+   
+4. For each feature being tested:
+   - Select applicable checks from loaded oracles
+   - Run grep/tool checks first (objective, fast)
+   - Then code path analysis for checks that require reasoning
+   - Record evidence type for each finding
+```
+
+这样做的好处：
+
+1. **不会撑爆 context** — 只加载当前 batch 需要的 checklist
+2. **每条检查都有具体的 grep / tool 命令** — 不靠 AI 主观判断
+3. **可以按框架扩展** — 加新框架只需加新 checklist 文件
+4. **和现有 tracker 无缝对接** — 每条 finding 映射到具体 checklist ID
+5. **pentester attack surface matrix** 给 AI 一个结构化的方式理解风险优先级
+
+---
+
+你要我把这些 oracle checklist 合并进你之前的 `zero.sop` 最终版里输出一份完整的可落地文件吗？还是你希望我先把每个 oracle checklist 单独写完整？
