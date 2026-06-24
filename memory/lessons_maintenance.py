@@ -40,29 +40,43 @@ def is_trivial(lesson):
 
 def load_lessons():
     """Load lessons with schema migration (ensure last_used field)."""
+
+    if not os.path.exists(LESSONS_FILE):
+        return []
+
     lessons = []
-    skipped = 0
     seen_ids = {}
-    with open(LESSONS_FILE) as f:
-        next_id = 1
+    next_id = 1
+    skipped = 0
+
+    with open(LESSONS_FILE, 'r') as f:
         for lineno, line in enumerate(f, 1):
             line = line.strip()
             if not line:
+                skipped += 1
                 continue
             try:
                 L = json.loads(line)
             except json.JSONDecodeError as e:
-                print(f"  [WARN] Line {lineno}: JSON parse error — {e.msg}", file=sys.stderr)
+                skipped += 1
+                print(f"  [WARN] Line {lineno}: JSON parse error -- {e.msg}", file=sys.stderr)
+                continue
+            if not isinstance(L, dict):
                 skipped += 1
                 continue
             # Migrate: ensure last_used field
             if 'last_used' not in L:
                 L['last_used'] = L.get('last_match', L.get('created'))
-            # Warn on duplicate IDs
+            # Auto-repair duplicate IDs
             lid = L.get('id')
             if lid is not None:
                 if lid in seen_ids:
-                    print(f"  [WARN] Duplicate id={lid} (line {lineno}) — '{L.get('title', '')[:50]}'", file=sys.stderr)
+                    old_id = lid
+                    lid = next_id
+                    next_id += 1
+                    seen_ids[lid] = lineno
+                    title = L.get('title', '')[:50]
+                    print(f"  [REPAIR] Duplicate id={old_id}, reassigned to id={lid} -- '{title}'", file=sys.stderr)
                 else:
                     seen_ids[lid] = lineno
             next_id = max(next_id, (L.get('id') or 0) + 1)
