@@ -15,7 +15,7 @@ Indexes (JSONL, agent-native):
 
 Handoffs: handoffs/index.md (OKF frontmatter, 14 entries) | Template: handoffs/HANDOFF_TEMPLATE.md
 
-GA Commands: /goal /hive /conductor /morphling /supervisor /plan /incubator /recovery /autonomous /subagent /review /verify /project /checklist /scheduled-task /web-setup /choose-mode /neat
+GA Commands: /goal /hive /conductor /morphling /supervisor /plan /incubator /recovery /autonomous /subagent /review /verify /project /checklist /scheduled-task /web-setup /boss /neat
 
 `/neat` — End-of-session knowledge cleanup (neat-freak). Runs lessons_maintenance.py, reconciles memory/docs. See `memory/neat-freak/SKILL.md`.
 
