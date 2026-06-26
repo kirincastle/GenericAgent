@@ -1,7 +1,7 @@
 {"name": "autonomous_operation", "tags": ["ga-mode, autonomous, automation"], "intent": "⚠️ 路径警告：autonomous_reports 在 temp/ 下，用`./autonomous_reports/`访问，不是`../memory/autonomous_reports/`或`../autonomous_reports", "file": "autonomous_operation_sop.md", "type": "sop"}
 {"name": "cf_workers", "tags": ["cloudflare, workers, deploy"], "intent": "- Account-level `POST /accounts/:id/workers/scripts/:name/routes` → 405 Method Not Allowed", "file": "cf_workers_sop.md", "type": "sop"}
 {"name": "checklist", "tags": ["ga-mode, checklist, quality"], "intent": "清单执行模式：单人、master 自执行，逐项验证不跳步。适用于质量门、多步流程、验证清单。", "file": "checklist_sop.md", "type": "sop"}
-{"name": "boss", "tags": ["ga-mode, choose, workflow"], "intent": "分析任务特征 → 推荐执行模式(Gaal/Hive/Conductor/直接) → 用户确认 → 自动启动", "file": "boss_sop.md", "type": "sop"}
+{"name": "boss", "tags": ["ga-mode, choose, workflow, first-mate"], "intent": "Analyze task → recommend execution mode (Conductor/Hive/Subagent/Direct) → user confirms → auto-launch", "file": "boss_sop.md", "type": "sop"}
 {"name": "code_review", "tags": ["ga-mode, code, review, quality"], "intent": "Code Review Quality Ga-Mode SOP for GA system", "file": "code_review_sop.md", "type": "sop"}
 {"name": "computer_use", "tags": ["vision, computer-use, automation"], "intent": "Human overview → docs/computer-usage.md | Agent SOP: ui_detect + ljqCtrl 集成", "file": "computer_use.md", "type": "sop"}
 {"name": "const", "tags": ["discipline, rules"], "intent": "用户自定义行为规则，与 Constitution 互补，冲突时用户规则优先。", "file": "const_sop.md", "type": "sop"}
