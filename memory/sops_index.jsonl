@@ -36,3 +36,4 @@
 {"name": "verify", "tags": ["ga-mode, verify, quality"], "intent": "验证模式：运行代码、执行测试、检查产物，不读代码代替运行。", "file": "verify_sop.md", "type": "sop"}
 {"name": "zero", "tags": ["ga-mode, zero, sweep, quality"], "intent": "全量应用质检循环：功能盘查→全量测试→全量修复→回归测试，产出 canonical spreadsheet", "file": "zero_sop.md", "type": "sop"}
 {"name": "web_setup", "tags": ["web, setup, browser"], "intent": "若 web_scan 和 web_execute_js 已测试可用，无需执行此 SOP。", "file": "web_setup_sop.md", "type": "sop"}
+{"name": "migration_dashboard_deploy", "tags": ["deploy, windows, migration-dashboard, wsl"], "intent": "Deploy migration-dashboard .exe to Windows: kill process from WSL via taskkill.exe, copy .exe to Windows project folder, user restarts via start.bat manually. No WSL service needed.", "file": "migration_dashboard_deploy_sop.md", "type": "sop"}

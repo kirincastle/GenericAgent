@@ -9,3 +9,5 @@
 {"priority": 2, "trigger": "user requires quality supervision/acceptance of subagent output", "mode": "supervisor", "execution": "background", "reason": "监察者模式包装 subagent 执行，保证质量"}
 {"priority": 2, "trigger": "absorb/distill/replicate external project capabilities", "mode": "morphling", "execution": "background", "reason": "项目级能力吸收，内部调 Goal Hive 执行"}
 {"priority": 2, "trigger": "full-quality sweep / zero-mode cleanup of entire codebase", "mode": "zero", "execution": "background", "reason": "全量质检需 Zero 状态机"}
+{"priority": 2, "trigger": "write-code tasks needing full dev lifecycle (new feature / refactor / build)", "mode": "pipeline", "execution": "background", "reason": "完整流水线: Plan→Audit→Exec→Zero"}
+{"priority": 0, "trigger": "no explicit task — context-aware mode", "mode": "context", "execution": "foreground", "reason": "LLM 需从对话上下文提取任务"}
