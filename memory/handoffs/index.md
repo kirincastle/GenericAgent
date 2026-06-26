@@ -10,10 +10,9 @@ intent: "Central registry of session handoffs"
 
 ## Active
 - [oc2api] [OC2API v3 stats fix + geoip debug](oc2api-v3-stats-fix-2026-06-24.md)
-- [checklist-system] [2026-06-26 — Handoff Checklist 系统 + Handoff 状态统一](2026-06-26-checklist-system.md)
 
 ## In Progress
-- [ga-feedback,md] [2026-06-26 — ga-feedback 修复 + MD Per-Device CLI 核验](20260626--gafeedback-修复-2026-06-26-v1.md)  *(picked up)*
+*(none)*
 
 ## Recently Completed
 - ~~[Handoff — 2026-06-22  CIARS maintenance + /setup-matt-pocock-skills](2026-06-22-ciars-setup-matt-pocock-skills.md)~~
@@ -34,3 +33,5 @@ intent: "Central registry of session handoffs"
 - ~~[oc2api 2026-06-22 Session Handoff (v3.065)](oc2api_2026-06-22-proxyip.md)~~
 - ~~[Lessons system — handoff lifecycle complete (2026-06-23)](lessons_system_2026-06-23.md)~~
 - ~~[GA Feedback Tool — standalone feedback bookmarklet](ga-feedback-tool--2026-06-26.md)~~
+- ~~[2026-06-26 — ga-feedback 修复 + MD Per-Device CLI 核验](20260626--gafeedback-修复-2026-06-26-v1.md)~~
+- ~~[2026-06-26 — Handoff Checklist 系统 + Handoff 状态统一](2026-06-26-checklist-system.md)~~
