@@ -10,12 +10,14 @@ intent: "Central registry of session handoffs"
 
 ## Active
 - [oc2api] [OC2API v3 stats fix + geoip debug](oc2api-v3-stats-fix-2026-06-24.md)
-- [ga-feedback,md] [2026-06-26 — ga-feedback 修复 + MD Per-Device CLI 核验](20260626--gafeedback-修复-2026-06-26-v1.md)
+- [checklist-system] [2026-06-26 — Handoff Checklist 系统 + Handoff 状态统一](2026-06-26-checklist-system.md)
+
+## In Progress
+- [ga-feedback,md] [2026-06-26 — ga-feedback 修复 + MD Per-Device CLI 核验](20260626--gafeedback-修复-2026-06-26-v1.md)  *(picked up)*
 
 ## Recently Completed
-- ~~[md] [migration-dashboard Phase 3 ✅ + Per-Device CLI Design (2026-06-23)](2026-06-23.md)~~ — superseded
-- ~~[checklist-system] [2026-06-26 — Handoff Checklist 系统 + Handoff 状态统一](2026-06-26-checklist-system.md)~~ — superseded (self-contained)
 - ~~[Handoff — 2026-06-22  CIARS maintenance + /setup-matt-pocock-skills](2026-06-22-ciars-setup-matt-pocock-skills.md)~~
+- ~~[migration-dashboard Phase 3 ✅ + Per-Device CLI Design (2026-06-23)](2026-06-23.md)~~
 - ~~[GA Context Window / Input 问题 Q&A (2026-06-22)](ga-context-cap-qna-2026-06-22.md)~~
 - ~~[Memory System 整理 — OKF Frontmatter + Handoffs 标准化 + L1 Tooling](memory-system-reorg-2026-06-23.md)~~
 - ~~[migration-dashboard custom-cli Phase 1 handoff (2026-06-23)](migration-dashboard-custom-cli-phase1-2026-06-23.md)~~
