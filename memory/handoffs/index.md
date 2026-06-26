@@ -9,11 +9,10 @@ intent: "Central registry of session handoffs"
 # Handoffs Index
 
 ## Active
-*(no active handoffs)*
+- [oc2api] [OC2API v3 stats fix + geoip debug](oc2api-v3-stats-fix-2026-06-24.md)
 
 ## In Progress
 - [md] [migration-dashboard Phase 3 ✅ + Per-Device CLI Design (2026-06-23)](2026-06-23.md)  *(picked up)*
-- [oc2api] [OC2API v3 stats fix + geoip debug](oc2api-v3-stats-fix-2026-06-24.md)  *(picked up)*
 
 ## Recently Completed
 - ~~[Handoff — 2026-06-22  CIARS maintenance + /setup-matt-pocock-skills](2026-06-22-ciars-setup-matt-pocock-skills.md)~~
