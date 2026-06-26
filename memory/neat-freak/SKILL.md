@@ -144,6 +144,7 @@ description: >
 - **受众不混**：CLAUDE.md 里不抄 docs/ 的全文，docs/ 里不写"我记得上次……"——这是记忆的事
 - **GA 不动 CLAUDE.md**：GA (GenericAgent) 的 neat 只改 `AGENTS.md` 和 `memory/`，不改 `CLAUDE.md`。CLAUDE.md 是 Claude Code 的专属上下文，GA 不读也不写。
 - **GA 额外步骤：lessons 维护**：GA 的 neat 必须运行 `memory/lessons_maintenance.py`(合并相似教训、降级 weak/dormant、检测冲突)。输出冲突和降级摘要给用户确认。
+|- **GA 额外步骤：handoff checklist 验证**：GA 的 /neat 在 lessons 维护之后，对每个 `in_progress` handoff 运行 `python3 memory/handoffs_maintenance.py verify <id>` 自动验证 checklist。
 |- **GA 额外步骤：handoff 自动创建**：GA 的 /neat 必须在运行 `lessons_maintenance.py` 之后，自动为新会话创建 handoff 记录当前工作。要求：(1) 总结本会话的核心成果、待办、技术决策 (body)；(2) 调用 `python3 memory/handoffs/handoff_auto.py --title "..." --topic <topic> --tags "a,b" --status active` 并将 body 通过 stdin 管道输入；(3) topic 按项目命名（如 oc2api, md, ciars），便于分组；(4) 如果本会话已有 active handoff（相同 topic），新 handoff supersede 旧的那条（旧 status → `superseded`，新记录在 `supersedes` 字段）
 - **指针不重复**：同一条事实如果 docs/ 里已详写，CLAUDE.md 只在「深入文档」指针表里出现一次，不在概览段再叙事一次
 
