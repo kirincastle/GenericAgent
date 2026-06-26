@@ -6,3 +6,6 @@
 {"priority": 2, "trigger": "multi-step pipeline with strict dependencies", "mode": "conductor", "execution": "background", "reason": "DAG 编排，步骤有序执行"}
 {"priority": 2, "trigger": "modify agent own behavior / system prompt", "mode": "direct", "execution": "foreground", "reason": "必须当前会话执行，无法委托"}
 {"priority": 2, "trigger": "task involves reading many files and writing summary", "mode": "subagent", "execution": "background", "reason": "独立分析任务"}
+{"priority": 2, "trigger": "user requires quality supervision/acceptance of subagent output", "mode": "supervisor", "execution": "background", "reason": "监察者模式包装 subagent 执行，保证质量"}
+{"priority": 2, "trigger": "absorb/distill/replicate external project capabilities", "mode": "morphling", "execution": "background", "reason": "项目级能力吸收，内部调 Goal Hive 执行"}
+{"priority": 2, "trigger": "full-quality sweep / zero-mode cleanup of entire codebase", "mode": "zero", "execution": "background", "reason": "全量质检需 Zero 状态机"}
