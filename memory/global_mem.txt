@@ -66,10 +66,11 @@
 |- **每次 deploy 产出要记到 `## Recent`**: `v3.xxx a1b2c3d (2026-06-22)`
 |- 参考: oc2api_deploy_sop.md
 
-## User Preference: Language Rule (2026-06-26)
-- **English for AI-facing docs/plans/code comments**; **Simplified Chinese for human (user) communication only**
-- This applies to all AI-as-consultant interactions (arena.ai reviews, design documents, prompt content)
-- Rationale: AI handles English technical content more accurately; user prefers Chinese for readability
+## User Preference: Language Rule (2026-06-26, revised)
+- **When talking to user (human)**: Simplified Chinese only; technical terms in English
+- **Everything else** (docs, SOPs, code comments, plans, thinking, any written output): English only
+- **Exception**: Use Chinese for docs only if user explicitly requests it
+- Rationale: user prefers Chinese readability in conversation; English is more precise for all technical/documentation work
 
 ## User Preference: Auto-Deploy (2026-06-17)
 - **Rule**: After any code change that compiles, deploy automatically. Never ask "deploy?".
