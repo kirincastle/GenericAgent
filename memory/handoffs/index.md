@@ -1,7 +1,7 @@
 ---
 type: index
 title: "Handoffs Index"
-date: 2026-06-26
+date: 2026-06-27
 tags: [handoffs, index]
 intent: "Central registry of session handoffs"
 ---
@@ -35,3 +35,4 @@ intent: "Central registry of session handoffs"
 - ~~[GA Feedback Tool — standalone feedback bookmarklet](ga-feedback-tool--2026-06-26.md)~~
 - ~~[2026-06-26 — ga-feedback 修复 + MD Per-Device CLI 核验](20260626--gafeedback-修复-2026-06-26-v1.md)~~
 - ~~[2026-06-26 — Handoff Checklist 系统 + Handoff 状态统一](2026-06-26-checklist-system.md)~~
+- [2026-06-27 — 澳车北上 LDPlayer + WSL ADB 监控设置](aochebeishang-ldplayer-2026-06-27.md) (active)
