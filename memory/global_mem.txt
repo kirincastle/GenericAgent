@@ -56,6 +56,7 @@
 
 ## Build (2026-06-17)
 - build.sh: bump → commit → push(bg) → build → rsync -z → systemd restart
+- **⚠️ cleanup 删反了!**: `tail -n +11 | while read old; do rm -f "$old"; done` 删的是最新10个不是最旧10个。必须用 `head -n -10`。会导致 deploy 后立即删掉刚上传的二进制→symlink dangling→服务重启就崩溃。(2026-06-28 修复 v3.093)
 - **⚠️ deploy 不碰 config**: 只 rsync binary + version.txt。config.json 在服务器 `/opt/oc2api/config.json`，需手动维护
 - **⚠️ deploy target**: systemd ExecStart=`/opt/oc2api/opencode2api`(软链→`opencode2api_v3.065`), 别复制到 `oc2api`(独立文件不是systemd使用的)
 - **JPKBB SSH 易挂**: 大管道/多命令 SSH 易超时。用 `timeout 10 ssh -o ConnectTimeout=5` + 短命令。禁内联复杂 Python。
@@ -169,6 +170,7 @@
 - 文档: memory/handoffs/*.md
 
 ## Recent
+|- **2026-06-28**: oc2api **v3.093 a12924b** — 修 build.sh cleanup(删反), 流式token重复计数(50x膨胀), 默认today tab
 |- **2026-06-23**: migration-dashboard **v3.1334 (Build: 09561f4, commit 3dfbf2c)** — Phase 3 complete: job store CRUD + execution + persistence + GC + history UI (tabs + detail view). Fixes: PaloAlto test date stale, job cancel integration test.
 |- **2026-06-22**: oc2api **v3.067 f61e2af (2026-06-22)** — build_commit 修复; 出口IP ipinfo.io fallback; Token高亮用 proxy_last_active（兼容所有代理模式）
 |- **2026-06-22**: oc2api **v3.066 c46693e (2026-06-22)** — (未bump版本的手动部署，已废弃)
