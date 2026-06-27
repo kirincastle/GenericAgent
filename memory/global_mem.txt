@@ -96,7 +96,7 @@
 - **集成**: `llmcore.py` BaseSession.__init__ 自动校正 context_win
 - **换算**: `context_win = context_tokens * 4 / 2` (cost 返 chars, cap=context_win*2)
 - **CLI**: `--refresh` 刷新缓存；`--show <model>` 查模型；`--check-cfg` 校验 mykey.py
-- **缓存**: `temp/model_registry_cache.json`，24h 过期
+- **Vision 模型**: 9router (`mmf/mimo-auto`) 已验证支持 vision；oc2api v3 各模型均不通 image 数据
 
 ## jpkbb 服务器 timezone → HKT (2026-06-18)
 - 原时区: `America/New_York` (EDT, UTC-5); 改后: `Asia/Hong_Kong` (HKT, UTC+8)
