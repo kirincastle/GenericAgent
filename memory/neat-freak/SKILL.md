@@ -70,9 +70,32 @@ Review this session's tool calls — focus on **results**, not attempts:
 - **Absolute Time**: `2026-04-29` always. NEVER "today", "recently".
 - **Audience**: docs/ reader is "someone new to this project with 5 minutes". Write for them.
 
-### Step 4: Handoff — Verify Existing + Create New
+### Step 4: Handoff — Evaluate Completion + Create
 
 **GA-ONLY** — this step is skipped for non-GA projects.
+
+**Phase 1: Evaluate session completion** — BEFORE creating any handoff, determine status:
+
+```
+Signals work is COMPLETE (→ superseded or no handoff):
+- User said "done"/"complete"/"stop"/"结束了"/"就这样"
+- All goals in session accomplished, no loose ends
+- User explicitly confirmed task finished
+
+Signals work is ONGOING (→ active handoff):
+- User said "继续"/"继续上次"/"resume"
+- Pending items exist (open questions, blocked tasks)
+- Session ended mid-task without clear completion
+- Handoff was requested mid-task by user
+
+Uncertain (→ ask_user):
+- Session has mixed done/undone items
+- No explicit completion signal
+- ⚠️ Do NOT guess — use ask_user with candidates:
+  ["Session complete, no handoff", "Ongoing — create active handoff", "Let me decide"]
+```
+
+**Phase 2: Execute**
 
 ```
 1. For each handoff with status: in_progress:
@@ -80,16 +103,20 @@ Review this session's tool calls — focus on **results**, not attempts:
    → If checklist complete: mark superseded
    → If incomplete: status stays in_progress
 
-2. Create handoff for THIS session:
-   Summarize body with: (a) core achievements (b) pending items (c) technical decisions
-   
-   python3 memory/handoffs/handoff_auto.py \
-     --title "..." \
-     --topic <project-name> \
-     --tags "a,b" \
-     --status active < body.txt
-   
-   → If same-topic active handoff exists: mark old as superseded, new record sets supersedes field
+2. Handle current session:
+   IF session is COMPLETE:
+      → No new handoff needed
+      → If a same-session handoff was already created, mark as superseded
+   IF session is ONGOING:
+      → Create new handoff with status: "active"
+      → Include: (a) core achievements (b) pending items (c) technical decisions
+      python3 memory/handoffs/handoff_auto.py \
+        --title "..." \
+        --topic <project-name> \
+        --tags "a,b" \
+        --status active < body.txt
+      → If same-topic active handoff exists: mark old as superseded
+   IF uncertain → ask_user first, then execute based on their answer
 ```
 
 ### Step 5: Report — Summary for User
@@ -136,7 +163,9 @@ Before declaring `/neat` done:
 - [ ] L1 index ≤30 lines (`wc -l` verify)
 - [ ] No relative time remnants (`grep -E "today|yesterday|recently|just.now"` → 0)
 - [ ] GA: `lessons_maintenance.py` ran, output reviewed
-- [ ] GA: handoffs verified and current-session handoff created
+- [ ] Phase 1 evaluation: session completion determined (complete/ongoing/ask_user)
+- [ ] Phase 2: in_progress handoffs verified (superseded or stays in_progress)
+- [ ] Phase 2: current session handoff created (ONLY if ongoing), or old one superseded (if complete)
 - [ ] Language check: `grep -cP '[\x{4e00}-\x{9fff}]'` on all modified files → **0**
 - [ ] All pointers in L1 point to existing files
 - [ ] No Chinese in any SOP/skill file (exception: user explicitly requested Chinese docs)
