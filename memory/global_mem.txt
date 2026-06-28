@@ -187,6 +187,6 @@
 
 ## SSH Keys (2026-06-28)
 - **main_vps_key**: `~/.ssh/main_vps_key` (2048 RSA, SHA256:ZVzx17UtKL3roNC3ulSBXtlbwnKamp2YUjpBGLlcONg) — 通用 VPS key，多台 VPS 共用。来源: MobaXterm PPK 转换
-  - 已在 SSH config 配置 Host `krkcb.20122102.xyz` 使用此 key
-  - 其他通用 VPS 需要在此配置
+  - **20122102.xyz (root)** (17 hosts): amtaa, amtab, amtac, jpkaaa, jpkab, jpkac, jpkba, jpkbb, jpkbc, krkaa, krkab, krkac, krkad, krkca, krkcb, krrea, krreb
+  - 全部已在 `~/.ssh/config` 配置，直接 `ssh <host>` 即可
 - **jpkbb key**: `~/.ssh/id_rsa` (4096 RSA, yukk@yukk) — jpkbb (100.127.66.71 / jpkbb.tail46c2fb.ts.net) 专用，无 `-i` 时默认尝试
