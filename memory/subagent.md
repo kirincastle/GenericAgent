@@ -42,6 +42,20 @@ intent: "Subagent 并行调用协议：task 分配、目录隔离、结果收集
 2. 分发：对每个文件启动一个subagent处理（主agent自己也可以处理其中一个）
 3. 收集：等所有subagent完成，主agent读取各输出文件，汇总结果
 
+**实战示例**（17台 VPS Docker 备份）：
+```bash
+# 1. 分组：17 台 → 4 组（每组 4-5 台）
+# 2. 对每组启动一个 subagent：
+#    每组 subagent 接到任务：SSH 进入指定 hosts，tar.gz compose 目录，scp 到本地
+# 3. 主agent monitor：每隔 30s 读 4 个 temp/<group>/output.txt
+# 4. 全部完成 → 汇总
+```
+
+**Map 分配原则**：
+- 每 subagent 处理 3-5 个独立子任务（太大 → 时间长；太小 → 管理开销高）
+- 子任务之间不能有共享资源冲突（不同 host/port/file）
+- 无冲突时，N 个 subagent 可安全并行
+
 ## subagent内部plan_mode使用
 **原则**：subagent本身是完整agent，接收多步骤任务时应在内部创建plan管理执行
 **触发条件**:任务包含3个以上子步骤、子步骤之间有依赖关系、需要checkpoint来恢复执行
