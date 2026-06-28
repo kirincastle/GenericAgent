@@ -1,7 +1,7 @@
 ---
 type: index
 title: "Handoffs Index"
-date: 2026-06-28
+date: 2026-06-26
 tags: [handoffs, index]
 intent: "Central registry of session handoffs"
 ---
@@ -9,12 +9,12 @@ intent: "Central registry of session handoffs"
 # Handoffs Index
 
 ## Active
-- [ocip_os_upgrade] [Fix jpkab dpkg lock — restart Phase A](ocip-fix-jpkab-dpkg-2026-06-28.md)
-- [ocip_os_upgrade] [Fix jpkac/jpkbc stuck do-release-upgrade — restart Phase A](ocip-fix-jpkac-jpkbc-2026-06-28.md)
-- [ocip_os_upgrade] [Monitor Phase A + Dispatch Phase B](ocip-monitor-phase-b-2026-06-28.md)
+- [aochebeishang] [澳车北上 — LDPlayer + WSL ADB 监控设置]()
 
 ## In Progress
-- [aochebeishang] [澳车北上 — LDPlayer + WSL ADB 监控设置]()  *(picked up)*
+- [ocip_os_upgrade] [OCIP OS Upgrade — Fix jpkab dpkg lock](ocip-fix-jpkab-dpkg-2026-06-28.md)  *(picked up)*
+- [ocip_os_upgrade] [OCIP OS Upgrade — Fix jpkac/jpkbc stuck do-release-upgrade](ocip-fix-jpkac-jpkbc-2026-06-28.md)  *(picked up)*
+- [ocip_os_upgrade] [OCIP OS Upgrade — Monitor Phase A + Dispatch Phase B](ocip-monitor-phase-b-2026-06-28.md)  *(picked up)*
 
 ## Recently Completed
 - ~~[Handoff — 2026-06-22  CIARS maintenance + /setup-matt-pocock-skills](2026-06-22-ciars-setup-matt-pocock-skills.md)~~
