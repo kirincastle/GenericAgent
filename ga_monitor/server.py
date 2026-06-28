@@ -13,6 +13,7 @@ BACKUP_DIR = os.environ.get('GA_BACKUP_DIR', "/home/moclaw/backups/ocip")
 TEMP_DIR = os.environ.get('GA_TEMP_DIR', os.path.join(ROOT, "temp"))
 HANDOFFS_FILE = os.environ.get('GA_HANDOFFS_FILE', os.path.join(ROOT, "memory", "handoffs", "handoffs.jsonl"))
 PLAN_FILE = os.environ.get('GA_PLAN_FILE', os.path.join(ROOT, "plan_ocip_os_upgrade", "plan.md"))
+TASKS_FILE = os.environ.get('GA_TASKS_FILE', os.path.join(ROOT, "ga_monitor", "task_status.json"))
 CACHE_TTL = int(os.environ.get('GA_CACHE_TTL', '5'))
 
 # ---- Cache decorator ----
@@ -80,6 +81,25 @@ h:100%;transition:width 1s}
 .phase-progress{background:#eab308;height:100%;transition:width 1s}
 .phase-items{display:flex;flex-wrap:wrap;gap:4px}
 .phase-item{font-size:10px;background:#334155;padding:2px 6px;border-radius:3px;color:#94a3b8}
+/* ===== Tasks Dashboard ===== */
+.task-type-badge{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:10px;font-size:11px;background:#1e293b;border:1px solid #475569;color:#e2e8f0;margin:2px}
+.task-type-label{display:inline-block;padding:0 6px;border-radius:4px;font-size:10px;background:#1e3a5f;color:#60a5fa;vertical-align:middle;margin-left:4px}
+.task-progress-bar{height:6px;background:#1e293b;border-radius:4px;overflow:hidden;margin:6px 0}
+.task-progress-fill{height:100%;border-radius:4px;transition:width 1s ease}
+.task-status-badge{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:500}
+.task-status-running{background:#0c1929;color:#38bdf8;border:1px solid #38bdf8}
+.task-status-completed{background:#052e16;color:#22c55e;border:1px solid #22c55e}
+.task-status-failed{background:#3b0a0a;color:#ef4444;border:1px solid #ef4444}
+.task-status-stuck{background:#3b2200;color:#f59e0b;border:1px solid #f59e0b}
+.task-status-pending{background:#1e293b;color:#94a3b8;border:1px solid #475569}
+.task-status-cancelled{background:#1e293b;color:#64748b;border:1px solid #475569}
+.task-card{border-left:3px solid #475569}
+.task-card.running{border-left-color:#38bdf8}
+.task-card.completed{border-left-color:#22c55e}
+.task-card.failed{border-left-color:#ef4444}
+.task-card.stuck{border-left-color:#f59e0b}
+.task-card.pending{border-left-color:#64748b}
+.task-group-title{font-size:13px;color:#94a3b8;margin:10px 0 6px;padding:4px 0;border-bottom:1px solid #1e293b}
 </style>
 </head>
 <body>
@@ -91,6 +111,7 @@ h:100%;transition:width 1s}
 </div>
 </div>
 
+<div id="tasks-section"><h2>📊 Tasks 任务看板</h2><div id="tasks-loading">Loading...</div></div>
 <div id="subagents-section"><h2>🤖 Active Subagents</h2><div id="subagents-loading">Loading...</div></div>
 <div id="backup-section"><h2>💾 Docker Backup Status</h2><div id="backup-loading">Loading...</div></div>
 <div id="handoff-section"><h2>📋 Active Handoffs</h2><div id="handoff-loading">Loading...</div></div>
@@ -104,6 +125,7 @@ async function loadData(){
   try{
     const r=await fetch('/api/status');
     const d=await r.json();
+    renderTasks(d.tasks);
     renderSubagents(d.subagents);
     renderBackups(d.backups);
     renderHandoffs(d.handoffs);
@@ -111,6 +133,74 @@ async function loadData(){
   }catch(e){
     document.querySelectorAll('[id$=-loading]').forEach(el=>el.textContent='Error loading: '+e.message);
   }
+}
+
+function escapeHtml(s){if(!s)return '';return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+
+function renderTasks(tasksData){
+  const el=document.getElementById('tasks-loading');
+  if(!tasksData||!tasksData.tasks||Object.keys(tasksData.tasks).length===0){
+    el.innerHTML='<div class="card card-good"><span class="dot dot-gray"></span> No active tasks</div>';
+    return;
+  }
+  const taskArr=Object.values(tasksData.tasks);
+  const types=tasksData.types||{};
+  const statusOrder=['running','completed','failed','stuck','pending','cancelled'];
+  const statusIcons={'running':'🟢','completed':'✅','failed':'🔴','stuck':'🟡','pending':'⏳','cancelled':'🚫'};
+  const statusLabels={'running':'Running','completed':'Completed','failed':'Failed','stuck':'Stuck','pending':'Pending','cancelled':'Cancelled'};
+  // Group by status
+  const groups={};
+  taskArr.forEach(t=>{const s=t.status||'pending';if(!groups[s])groups[s]=[];groups[s].push(t)});
+  // Sort each group: running by progress desc, others by last_update desc
+  Object.keys(groups).forEach(s=>{
+    groups[s].sort((a,b)=>{
+      if(s==='running')return (b.progress_pct||0)-(a.progress_pct||0);
+      return (b.last_update||'').localeCompare(a.last_update||'');
+    });
+  });
+  let html='';
+  // Type summary bar
+  if(Object.keys(types).length>0){
+    html+='<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px;align-items:center">';
+    html+='<span style="font-size:11px;color:#64748b;margin-right:4px">Types:</span>';
+    Object.entries(types).forEach(([type,st])=>{
+      html+=`<span class="task-type-badge">${escapeHtml(type)}: ${st.total||0} (🟢${st.running||0} ✅${st.completed||0} 🔴${st.failed||0})</span>`;
+    });
+    html+='</div>';
+  }
+  // Status groups in order: running → completed → failed → stuck → pending → cancelled
+  statusOrder.forEach(status=>{
+    const items=groups[status];
+    if(!items||items.length===0)return;
+    html+=`<div class="task-group-title">${statusIcons[status]||'❓'} ${statusLabels[status]||status} (${items.length})</div>`;
+    html+='<div class="grid">';
+    items.forEach(t=>{
+      const pct=Math.min(100,Math.max(0,t.progress_pct||0));
+      const pColor=status==='running'?'#38bdf8':status==='completed'?'#22c55e':status==='failed'?'#ef4444':status==='stuck'?'#f59e0b':'#64748b';
+      html+=`<div class="card task-card ${status}">`;
+      html+=`<div class="name">${escapeHtml(t.title||t.id)}`;
+      if(t.type)html+=` <span class="task-type-label">${escapeHtml(t.type)}</span>`;
+      html+=`</div>`;
+      if(t.phase)html+=`<div class="meta">📌 ${escapeHtml(t.phase)}</div>`;
+      if(t.host)html+=`<div class="meta">🖥 ${escapeHtml(t.host)}</div>`;
+      // Progress bar
+      html+=`<div class="task-progress-bar"><div class="task-progress-fill" style="width:${pct}%;background:${pColor}"></div></div>`;
+      html+=`<div style="display:flex;justify-content:space-between;align-items:center;margin:2px 0">`;
+      html+=`<span class="task-status-badge task-status-${status}">${statusIcons[status]||''} ${escapeHtml(statusLabels[status]||status)}</span>`;
+      html+=`<span style="font-size:12px;color:#94a3b8;font-weight:500">${pct}%</span>`;
+      html+=`</div>`;
+      if(t.message)html+=`<div class="meta" style="color:#e2e8f0;font-size:12px">${escapeHtml(String(t.message).substring(0,120))}</div>`;
+      if(t.last_update)html+=`<div class="meta">⏱ ${escapeHtml(t.last_update)}</div>`;
+      if(t.handoff_id)html+=`<div class="meta">🔗 <code>${escapeHtml(t.handoff_id)}</code></div>`;
+      html+=`</div>`;
+    });
+    html+='</div>';
+  });
+  // Last updated timestamp
+  if(tasksData.last_updated){
+    html+=`<div style="margin-top:6px;font-size:11px;color:#475569">Last updated: ${escapeHtml(tasksData.last_updated)}</div>`;
+  }
+  el.innerHTML=html;
 }
 
 function renderSubagents(agents){
@@ -229,6 +319,7 @@ class GAHandler(BaseHTTPRequestHandler):
     
     def _get_status(self):
         return {
+            'tasks': self._get_tasks(),
             'subagents': self._get_subagents(),
             'backups': self._get_backups(),
             'handoffs': self._get_handoffs(),
@@ -413,6 +504,16 @@ class GAHandler(BaseHTTPRequestHandler):
             phases['Error'] = {'total': 0, 'done': 0, 'in_progress': 0, 'todo': 0, 'items': [str(e)]}
         return {'items': items, 'total': len(items), 'phases': phases}
     
+    def _get_tasks(self):
+        """Read task_status.json"""
+        try:
+            if os.path.exists(TASKS_FILE):
+                with open(TASKS_FILE, 'r') as f:
+                    return json.load(f)
+        except Exception as e:
+            return {'error': str(e), 'tasks': {}, 'types': {}}
+        return {'tasks': {}, 'types': {}}
+    
     def _fmt_size(self, bytes_val):
         for unit in ['B','K','M','G','T']:
             if bytes_val < 1024:
@@ -432,6 +533,7 @@ def main():
     print(f"  Backups:   {BACKUP_DIR}")
     print(f"  Handoffs:  {HANDOFFS_FILE}")
     print(f"  Plan:      {PLAN_FILE}")
+    print(f"  Tasks:     {TASKS_FILE}")
     server.serve_forever()
 
 if __name__ == '__main__':
