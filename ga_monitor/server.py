@@ -4,15 +4,35 @@ GA Monitor — lightweight status dashboard
 Usage: python3 server.py [port]
 Default port: 10000
 """
-import json, os, subprocess, re, glob, time
+import json, os, subprocess, re, glob, time, threading, functools
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from urllib.parse import urlparse
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-BACKUP_DIR = "/home/moclaw/backups/ocip"
-TEMP_DIR = os.path.join(ROOT, "temp")
-HANDOFFS_FILE = os.path.join(ROOT, "memory", "handoffs", "handoffs.jsonl")
-PLAN_FILE = os.path.join(ROOT, "plan_ocip_os_upgrade", "plan.md")
+BACKUP_DIR = os.environ.get('GA_BACKUP_DIR', "/home/moclaw/backups/ocip")
+TEMP_DIR = os.environ.get('GA_TEMP_DIR', os.path.join(ROOT, "temp"))
+HANDOFFS_FILE = os.environ.get('GA_HANDOFFS_FILE', os.path.join(ROOT, "memory", "handoffs", "handoffs.jsonl"))
+PLAN_FILE = os.environ.get('GA_PLAN_FILE', os.path.join(ROOT, "plan_ocip_os_upgrade", "plan.md"))
+CACHE_TTL = int(os.environ.get('GA_CACHE_TTL', '5'))
+
+# ---- Cache decorator ----
+cache_store = {}
+cache_lock = threading.Lock()
+def cached(ttl=CACHE_TTL):
+    def deco(fn):
+        @functools.wraps(fn)
+        def wrapper(*args, **kwargs):
+            key = (fn.__name__, args, tuple(sorted(kwargs.items())))
+            with cache_lock:
+                hit = cache_store.get(key)
+                if hit and time.time() - hit['ts'] < ttl:
+                    return hit['data']
+            result = fn(*args, **kwargs)
+            with cache_lock:
+                cache_store[key] = {'data': result, 'ts': time.time()}
+            return result
+        return wrapper
+    return deco
 
 HOSTS = ["amtaa","amtab","amtac","jpkaaa","jpkab","jpkac","jpkba","jpkbb","jpkbc",
          "krkaa","krkab","krkac","krkad","krkca","krkcb","krrea","krreb"]
@@ -215,71 +235,57 @@ class GAHandler(BaseHTTPRequestHandler):
             'plan': self._get_plan(),
         }
     
+    @cached(ttl=CACHE_TTL)
     def _get_subagents(self):
-        """Find active agentmain.py processes"""
+        """Find active agentmain.py processes — single ps call"""
         agents = []
         try:
+            # Single ps call: pid,etime,cpu,mem,cmd
             result = subprocess.run(
-                ['ps', 'aux'], capture_output=True, text=True, timeout=10
+                ['ps', '-eo', 'pid,etime,%cpu,%mem,cmd'],
+                capture_output=True, text=True, timeout=10
             )
+            header_skipped = False
             for line in result.stdout.splitlines():
-                if 'agentmain.py' not in line or 'grep' in line:
+                if not header_skipped:
+                    header_skipped = True
                     continue
-                parts = line.split()
-                if len(parts) < 11:
+                if 'agentmain.py' not in line:
                     continue
-                pid = parts[1]
-                cpu = parts[2]
-                mem = parts[3]
-                # Get elapsed time
-                try:
-                    etime = subprocess.run(
-                        ['ps', '-o', 'etime=', '-p', pid],
-                        capture_output=True, text=True, timeout=5
-                    ).stdout.strip()
-                except:
-                    etime = parts[10]
-                runtime = etime or parts[10]
-
-                # Read subagent output for last_output and logs
+                parts = line.split(None, 4)
+                if len(parts) < 5:
+                    continue
+                pid, runtime, cpu, mem, cmd = parts
+                # Read subagent output
                 task_dirs = glob.glob(os.path.join(TEMP_DIR, '*'))
+                task_name = ''
+                last_output = ''
                 log_tail = ''
                 stderr_tail = ''
                 turn = 0
-                last_output = ''
-                outfile = ''
-                task_dir = ''
-                task_name = ''
                 for td in task_dirs:
                     tn = os.path.basename(td)
-                    if tn in line:
-                        task_name = tn
-                        task_dir = td
-                        outfile = os.path.join(td, 'output.txt')
-                        if os.path.exists(outfile):
-                            try:
-                                with open(outfile, 'r', errors='replace') as f:
-                                    content = f.read()
-                                turn = content.count('Turn ')
-                                lines = content.strip().splitlines()
-                                last_output = '\n'.join(lines[-3:]) if lines else ''
-                            except:
-                                pass
-                
-                # Log tails
-                log_tail = ''
-                stderr_tail = ''
-                try:
-                    with open(outfile, 'r', errors='replace') as f:
-                        log_lines = f.read().strip().splitlines()
-                    log_tail = '\n'.join(log_lines[-10:]) if log_lines else ''
-                    stderrfile = os.path.join(task_dir, 'stderr.log')
-                    if os.path.exists(stderrfile):
-                        with open(stderrfile, 'r', errors='replace') as f:
-                            stderr_lines = f.read().strip().splitlines()
-                        stderr_tail = '\n'.join(stderr_lines[-5:]) if stderr_lines else ''
-                except:
-                    pass
+                    if tn not in cmd:
+                        continue
+                    task_name = tn
+                    outfile = os.path.join(td, 'output.txt')
+                    if not os.path.exists(outfile):
+                        break
+                    try:
+                        with open(outfile, 'r', errors='replace') as f:
+                            content = f.read()
+                        turn = content.count('Turn ')
+                        lines = content.strip().splitlines()
+                        last_output = '\n'.join(lines[-3:]) if lines else ''
+                        log_tail = '\n'.join(lines[-10:]) if lines else ''
+                        stderrfile = os.path.join(td, 'stderr.log')
+                        if os.path.exists(stderrfile):
+                            with open(stderrfile, 'r', errors='replace') as f:
+                                stderr_lines = f.read().strip().splitlines()
+                            stderr_tail = '\n'.join(stderr_lines[-5:]) if stderr_lines else ''
+                    except:
+                        pass
+                    break  # matched, stop scanning
                 
                 agents.append({
                     'pid': pid,
@@ -297,23 +303,25 @@ class GAHandler(BaseHTTPRequestHandler):
             agents.append({'error': str(e)})
         
         if not agents:
-            # Check for orphan task dirs
+            # Orphan task dirs (exited processes)
             for d in sorted(os.listdir(TEMP_DIR)):
                 task_dir = os.path.join(TEMP_DIR, d)
                 outfile = os.path.join(task_dir, 'output.txt')
                 if os.path.isdir(task_dir) and os.path.exists(outfile):
-                    with open(outfile, 'r', errors='replace') as f:
-                        content = f.read()
-                    turn = content.count('Turn ')
-                    agents.append({
-                        'pid': '-',
-                        'task': d,
-                        'runtime': 'exited',
-                        'turn': turn,
-                        'last_output': '(process ended)',
-                        'alive': False,
-                    })
-        
+                    try:
+                        with open(outfile, 'r', errors='replace') as f:
+                            content = f.read()
+                        turn = content.count('Turn ')
+                        agents.append({
+                            'pid': '-',
+                            'task': d,
+                            'runtime': 'exited',
+                            'turn': turn,
+                            'last_output': '(process ended)',
+                            'alive': False,
+                        })
+                    except:
+                        pass
         return agents
     
     def _get_backups(self):

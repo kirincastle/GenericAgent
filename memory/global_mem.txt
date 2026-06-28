@@ -62,10 +62,11 @@
 - **⚠️ deploy target**: systemd ExecStart=`/opt/oc2api/opencode2api`(软链→`opencode2api_v3.065`), 别复制到 `oc2api`(独立文件不是systemd使用的)
 - **JPKBB SSH 易挂**: 大管道/多命令 SSH 易超时。用 `timeout 10 ssh -o ConnectTimeout=5` + 短命令。禁内联复杂 Python。
 
-## Deploy Lessons (2026-06-22)
+## Deploy Lessons (2026-06-28)
 |- **必须用 `build.sh deploy`** — 手动 `go build` + scp 跳过了 version bump 和 ldflags hash 注入，导致 `build_commit=""`
 |- **oc2api 是 single binary `//go:embed admin/index.html`** — 前端 HTML 改动必须 rebuild，不能单独 scp
 |- **每次 deploy 产出要记到 `## Recent`**: `v3.xxx a1b2c3d (2026-06-22)`
+|- **Debian OS upgrade: dpkg conffile prompts not covered by `DEBIAN_FRONTEND=noninteractive`** — 修改过的 config 文件(/etc/crontab 等)会在 upgrade 时阻塞等待交互。须额外加 `-o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold"` 或 `echo '...' | dpkg --force-confdef --force-confold`
 |- 参考: oc2api_deploy_sop.md
 
 ## User Preference: Language Rule (2026-06-26, revised)
