@@ -270,6 +270,27 @@ def build_conductor_prompt(args_text: str = "") -> str:
     )
 
 
+def build_boss_prompt(args_text: str = "") -> str:
+    """`/boss <task>` → Boss Mode: analyze → decompose → delegate → monitor.
+
+    References memory/boss_sop.md for the full workflow.
+    Iron Rule: GA MUST NOT execute any task directly. All work goes through
+    subagent/goal/hive/conductor. If GA believes direct execution is necessary,
+    it MUST ask the user for explicit approval first.
+    """
+    args_text = (args_text or "").strip()
+    base = (
+        "你已被切换到 Boss Mode。请立即读取 `memory/boss_sop.md` 理解全部规则。\n\n"
+        "核心原则：\n"
+        "1. 你的角色是分析→分解→派发→监督→汇报，而不是自己执行\n"
+        "2. 99% 任务走 subagent/goal/hive/conductor 后台\n"
+        "3. 如需自己执行，必须先 ask_user 获得明确批准\n\n"
+    )
+    if args_text:
+        return base + f"用户任务：{args_text}"
+    return base + "请分析当前上下文，提取任务后按 Boss Mode 流程执行。"
+
+
 # ----- /scheduler reflect-task discovery + launch -------------------------
 
 def list_reflect_tasks() -> list[dict]:
@@ -589,6 +610,7 @@ PALETTE_ENTRIES: list[tuple[str, str, str]] = [
     ("/goal",      "[goal]",    "进入 Goal 模式（需 condition 约束）"),
     ("/hive",      "[target]",  "进入 Hive 多 worker 协作模式"),
     ("/conductor", "[task]",    "调用 frontends/conductor.py 多 subagent 编排"),
+    ("/boss",      "[task]",    "Boss Mode — 分析→分解→派发→监督→汇报，不自执行"),
     ("/scheduler", "",          "多选启动/停止 reflect 任务（cron 由 reflect/scheduler.py 驱动）"),
     ("/resume",    "",           "列出最近会话并恢复其中一个（GA 端展开 prompt）"),
 ]
@@ -609,6 +631,7 @@ def prompt_for(cmd: str, args_text: str) -> Optional[str]:
         "/goal":      build_goal_prompt,
         "/hive":      build_hive_prompt,
         "/conductor": build_conductor_prompt,
+        "/boss":      build_boss_prompt,
     }
     fn = table.get(cmd)
     return fn(args_text) if fn else None
