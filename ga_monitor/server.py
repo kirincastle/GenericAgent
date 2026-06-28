@@ -52,9 +52,14 @@ pre{font-size:11px;color:#94a3b8;white-space:pre-wrap;word-break:break-all;max-h
 .log-btn:hover{background:#475569}
 .log-content{font-size:11px;max-height:200px;overflow:auto;background:#1e293b;padding:8px;border-radius:4px;color:#94a3b8;white-space:pre-wrap}
 .dimmed{opacity:0.5}
-.subagent-table{width:100%;border-collapse:collapse;font-size:13px}
-.subagent-table th{text-align:left;padding:6px 8px;border-bottom:1px solid #334155;color:#94a3b8;font-size:11px;text-transform:uppercase}
-.subagent-table td{padding:6px 8px;border-bottom:1px solid #1e293b;vertical-align:top}
+.phase-row{background:#1e293b;border-radius:6px;padding:8px 12px;margin-bottom:8px}
+.phase-label{font-size:12px;color:#94a3b8;margin-bottom:4px}
+.phase-bar{height:8px;background:#334155;border-radius:4px;overf
+...[Truncated]...
+h:100%;transition:width 1s}
+.phase-progress{background:#eab308;height:100%;transition:width 1s}
+.phase-items{display:flex;flex-wrap:wrap;gap:4px}
+.phase-item{font-size:10px;background:#334155;padding:2px 6px;border-radius:3px;color:#94a3b8}
 </style>
 </head>
 <body>
@@ -145,10 +150,23 @@ function renderPlan(p){
   const el=document.getElementById('plan-loading');
   if(!p){el.innerHTML='<div class="card">No plan data</div>';return}
   let html='';
+  // Phase progress bars
+  if(p.phases){
+    Object.entries(p.phases).forEach(([name, ph])=>{
+      if(ph.total===0) return;
+      const pctDone = Math.round(ph.done/ph.total*100);
+      const pctInProg = Math.round(ph.in_progress/ph.total*100);
+      html+=`<div class="phase-row"><div class="phase-label">${name}: ${ph.done}/${ph.total}</div>
+        <div class="phase-bar"><div class="phase-done" style="width:${pctDone}%"></div>
+        <div class="phase-progress" style="width:${pctInProg}%"></div></div>
+        <div class="phase-items">`+ph.items.map(i=>`<span class="phase-item">${i.replace(/</g,'&lt;')}</span>`).join(' ')+`</div></div>`;
+    });
+  }
+  // Checklist items  
   p.items.forEach(item=>{
     const done=item.startsWith('[✓]')||item.startsWith('[x]');
     const cls=done?'card-good':'card-warn';
-    html+=`<div class="card ${cls}" style="margin-bottom:4px;padding:6px 10px;font-size:13px"><span class="dot ${done?'dot-green':'dot-yellow'}"></span> ${item}</div>`;
+    html+=`<div class="card ${cls}" style="margin-bottom:4px;padding:4px 8px;font-size:12px"><span class="dot ${done?'dot-green':'dot-yellow'}"></span> ${item}</div>`;
   });
   el.innerHTML=html;
 }
@@ -211,6 +229,8 @@ class GAHandler(BaseHTTPRequestHandler):
                 if len(parts) < 11:
                     continue
                 pid = parts[1]
+                cpu = parts[2]
+                mem = parts[3]
                 # Get elapsed time
                 try:
                     etime = subprocess.run(
@@ -227,10 +247,14 @@ class GAHandler(BaseHTTPRequestHandler):
                 stderr_tail = ''
                 turn = 0
                 last_output = ''
+                outfile = ''
+                task_dir = ''
+                task_name = ''
                 for td in task_dirs:
-                    task_name = os.path.basename(td)
-                    # Match task name from command line
-                    if task_name in line:
+                    tn = os.path.basename(td)
+                    if tn in line:
+                        task_name = tn
+                        task_dir = td
                         outfile = os.path.join(td, 'output.txt')
                         if os.path.exists(outfile):
                             try:
@@ -350,18 +374,36 @@ class GAHandler(BaseHTTPRequestHandler):
         return handoffs
     
     def _get_plan(self):
-        """Parse plan.md checkboxes"""
+        """Parse plan.md checkboxes and phase progress"""
         items = []
+        phases = {}  # phase_name -> {total, done, in_progress, items}
+        current_phase = 'Other'
         try:
             if os.path.exists(PLAN_FILE):
                 with open(PLAN_FILE, 'r', errors='replace') as f:
                     for line in f:
                         line = line.rstrip()
-                        if re.match(r'\s*[-*]\s*\[[\sx✓]\]', line):
+                        # Detect phase headers: ## Phase X
+                        m = re.match(r'##\s*(Phase\s+\S+)', line)
+                        if m:
+                            current_phase = m.group(1)
+                            if current_phase not in phases:
+                                phases[current_phase] = {'total': 0, 'done': 0, 'in_progress': 0, 'todo': 0, 'items': []}
+                        # Detect numbered checklist items: N. [MARKER]
+                        m = re.match(r'\s*\d+\.\s*\[([\s✓→])\]\s*\*\*(P\d[^:]+):', line)
+                        if m:
+                            marker = m.group(1)
+                            title = m.group(2).strip()
+                            status = 'done' if marker == '✓' else ('in_progress' if marker == '→' else 'todo')
                             items.append(line.strip())
-        except:
-            pass
-        return {'items': items, 'total': len(items)}
+                            if current_phase not in phases:
+                                phases[current_phase] = {'total': 0, 'done': 0, 'in_progress': 0, 'todo': 0, 'items': []}
+                            phases[current_phase]['total'] += 1
+                            phases[current_phase][status] += 1
+                            phases[current_phase]['items'].append(f"[{marker}] {title}")
+        except Exception as e:
+            phases['Error'] = {'total': 0, 'done': 0, 'in_progress': 0, 'todo': 0, 'items': [str(e)]}
+        return {'items': items, 'total': len(items), 'phases': phases}
     
     def _fmt_size(self, bytes_val):
         for unit in ['B','K','M','G','T']:
