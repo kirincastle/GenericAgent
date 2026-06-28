@@ -1,7 +1,7 @@
 # [Global Memory Insight]
 Read L2 or ls ../memory/ for L3 when needed
 L0(META-SOP): memory_management_sop
-L2 topics: lessons | oc2api_ports | oc2api_system | rtk | caveman | git_config | cache_hit_opt | socks5_poll | jpkbb_timezone(hkt) | probeModelStatus | model_registry | codegraph | ponytail | oc2api_proip_v3.059 | current_model | lang_pref | writing_great_skills | ssh_keys
+L2 topics: lessons | oc2api_ports | oc2api_system | rtk | caveman | git_config | cache_hit_opt | socks5_poll | jpkbb_timezone(hkt) | probeModelStatus | model_registry | codegraph | ponytail | oc2api_proip_v3.059 | current_model | lang_pref | writing_great_skills | ssh_keys | 9router_deploy
 
 L3 SOPs (type: sop) — 42 files with OKF frontmatter:
 aochebeishang_monitoring | autonomous_operation | cf_workers | checklist | code_review | computer_use | const | edgetunnel_workers_pages_guide | ga_feedback | github_contribution | gnhf | goal_hive | goal_hive_master_duty | goal_mode | incubator | lavish_skill | learn_eval | lessons_sop | ljqCtrl_sop | memory_cleanup | migration_dashboard_deploy | morphling | no_mistakes | oc2api_deploy | oc2api_system | okf_frontmatter_convention | plan | pre_task_scanner | procmem_scanner | project_mode | recovery | review | scheduled_task | subagent | supervisor | tmwebdriver | treehouse | verify | vision | arena_audit_review | vision | web_setup | writing_great_skills

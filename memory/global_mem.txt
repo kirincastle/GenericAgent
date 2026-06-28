@@ -185,6 +185,12 @@
 - **Trim trigger**: context_win × 2 = 800K chars
 - **Source**: models.dev/api.json → model_registry.py → cost_tracker.py
 
+## 9router (2026-06-28)
+- **部署**: jpkbb (root SSH), Docker container `decolua/9router:latest`, port 20128
+- **代码**: `/home/moclaw/projects/9router`, git origin: github.com/decolua/9router
+- **当前版本**: v0.5.8 (容器内); **最新**: v0.5.12 (remote)
+- **更新**: Docker build/run (start.sh), 也可 `docker pull decolua/9router:latest` + 重启
+
 ## SSH Keys (2026-06-28)
 - **main_vps_key**: `~/.ssh/main_vps_key` (2048 RSA, SHA256:ZVzx17UtKL3roNC3ulSBXtlbwnKamp2YUjpBGLlcONg) — 通用 VPS key，多台 VPS 共用。来源: MobaXterm PPK 转换
   - **20122102.xyz (root)** (17 hosts): amtaa, amtab, amtac, jpkaaa, jpkab, jpkac, jpkba, jpkbb, jpkbc, krkaa, krkab, krkac, krkad, krkca, krkcb, krrea, krreb
