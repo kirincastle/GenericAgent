@@ -207,9 +207,10 @@
 - **SOP**: `/home/moclaw/projects/external/genericagent/memory/ocip_os_upgrade_sop.md`
 - **Plan**: `/home/moclaw/projects/external/genericagent/plan_ocip_os_upgrade/plan.md`
 - **Remaining Phase 2**: 7 Debian + 4 Ubuntu VPS pending upgrade
-- **2026-06-28 Phase A running**: 11 VPS (amtaa~krkca) Ubuntu 20.04→22.04 background scripts
-- **Stuck VPS**: jpkab (dpkg lock), jpkac/jpkbc (stuck do-release-upgrade) → subagents dispatched
-- **Phase B (22.04→24.04)**: Pending Phase A completion, subagent ocip-monitor-phase-b will dispatch
+- **2026-06-28 Phase A (20.04→22.04)**: 10/11 ✅. Fixed jpkab (dpkg+old kernel), jpkbc (stuck). jpkac still down — user handling panel reboot.
+- **DDNS fix**: All ddns/ddns6 containers updated with new CF API token, all Up across 10 VPS.
+- **SOP rewrite**: ocip_os_upgrade_sop.md → writing-great-skills applied (30% reduction), VPS inventory table added, DDNS recovery section.
+- **Phase B (22.04→24.04)**: Pending jpkac recovery + user decision.
 
 ## Boss Mode (2026-06-28)
 - **SOP**: memory/boss_sop.md — self-execution lock added
