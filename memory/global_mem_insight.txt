@@ -30,3 +30,4 @@ GA Commands: /goal /hive /conductor /morphling /supervisor /plan /incubator /rec
 - **报路径必给 full path** — 所有文件路径写绝对路径 `/home/moclaw/...`，不缩写
 - **代码变更后 summary 必报 version + short_hash** — vX.XXX + commit-hash + deploy 状态
 - **First Mate 原则** — `/boss` 时 99% 任务走 subagent/goal/hive/conductor 后台；我监督进度、补位。除非任务必须前台实时判断才自己做
+ocip_os_upgrade | OCIP OS Upgrade project - Phase 1 done, SOP written, Phase 2 pending

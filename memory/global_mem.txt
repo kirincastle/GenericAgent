@@ -197,3 +197,13 @@
   - **20122102.xyz (root)** (17 hosts): amtaa, amtab, amtac, jpkaaa, jpkab, jpkac, jpkba, jpkbb, jpkbc, krkaa, krkab, krkac, krkad, krkca, krkcb, krrea, krreb
   - 全部已在 `~/.ssh/config` 配置，直接 `ssh <host>` 即可
 - **jpkbb key**: `~/.ssh/id_rsa` (4096 RSA, yukk@yukk) — jpkbb (100.127.66.71 / jpkbb.tail46c2fb.ts.net) 专用，无 `-i` 时默认尝试
+
+## OCIP OS Upgrade (2026-06-28)
+- **Phase 1 completed**: krkaa Debian 11->12 ✅, krkcb Ubuntu 20.04->24.04 ✅
+- **CF API token**: Renewed (old token expired, all ddns/dnsrobocert containers updated with new token)
+- **Lessons**: (1) ddns Restarting -> MUST check docker logs, never assume normal.
+  (2) Pre-upgrade health check baseline mandatory.
+  (3) docker-compose standalone v2.2.3 broken after Ubuntu 24.04 upgrade. Fix: apt install docker-compose-v2
+- **SOP**: `/home/moclaw/projects/external/genericagent/memory/ocip_os_upgrade_sop.md`
+- **Plan**: `/home/moclaw/projects/external/genericagent/plan_ocip_os_upgrade/plan.md`
+- **Remaining Phase 2**: 7 Debian + 4 Ubuntu VPS pending upgrade
