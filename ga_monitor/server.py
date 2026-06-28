@@ -93,6 +93,7 @@ function renderSubagents(agents){
   if(!agents||agents.length===0){el.innerHTML='<div class="card card-good"><span class="dot dot-gray"></span> No active subagents</div>';return}
   let html='<table class="subagent-table"><tr><th>PID</th><th>Task</th><th>Runtime</th><th>CPU%</th><th>MEM%</th><th>Turn</th><th>Last Output</th><th>Log</th></tr>';
   agents.forEach(a=>{
+    if(a.error) return;
     const cls=a.alive?'':'dimmed';
     const cpu=a.cpu||'-';
     const mem=a.mem||'-';
@@ -221,7 +222,7 @@ class GAHandler(BaseHTTPRequestHandler):
                 runtime = etime or parts[10]
 
                 # Read subagent output for last_output and logs
-                task_dirs = glob(os.path.join(TEMP_DIR, '*'))
+                task_dirs = glob.glob(os.path.join(TEMP_DIR, '*'))
                 log_tail = ''
                 stderr_tail = ''
                 turn = 0
@@ -258,7 +259,7 @@ class GAHandler(BaseHTTPRequestHandler):
                 
                 agents.append({
                     'pid': pid,
-                    'task': task,
+                    'task': task_name,
                     'runtime': runtime,
                     'turn': turn,
                     'cpu': cpu,
