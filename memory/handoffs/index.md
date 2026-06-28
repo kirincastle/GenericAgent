@@ -1,7 +1,7 @@
 ---
 type: index
 title: "Handoffs Index"
-date: 2026-06-26
+date: 2026-06-28
 tags: [handoffs, index]
 intent: "Central registry of session handoffs"
 ---
@@ -9,7 +9,9 @@ intent: "Central registry of session handoffs"
 # Handoffs Index
 
 ## Active
-*(no active handoffs)*
+- [ocip_os_upgrade] [Fix jpkab dpkg lock — restart Phase A](ocip-fix-jpkab-dpkg-2026-06-28.md)
+- [ocip_os_upgrade] [Fix jpkac/jpkbc stuck do-release-upgrade — restart Phase A](ocip-fix-jpkac-jpkbc-2026-06-28.md)
+- [ocip_os_upgrade] [Monitor Phase A + Dispatch Phase B](ocip-monitor-phase-b-2026-06-28.md)
 
 ## In Progress
 - [aochebeishang] [澳车北上 — LDPlayer + WSL ADB 监控设置]()  *(picked up)*
