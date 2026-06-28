@@ -44,7 +44,8 @@
 - SUB_URL: systemd env var + restart 才生效, token 静态(MD5MD5)
 
 ## OC2API Ports (2026-06-17)
-- Project: `/home/moclaw/projects/oc2api`, Deploy: jpkbb (100.127.66.71) via Tailscale
+- Project: `/home/moclaw/projects/oc2api`, Deploy: jpkbb (100.127.66.71 / jpkbb.tail46c2fb.ts.net) via Tailscale
+- **SSH key**: `~/.ssh/id_rsa` (4096 RSA, yukk@yukk) — SSH 无 `-i` 参数时默认使用此 key；`jpkbb_id_rsa` 和 `jpkbb_root` 是同一 key 的副本，不会被 SSH 主动查找
 - 8000=v3, 8001=v4, 8005=v5, 8006=v6; config: `/opt/oc2api/config.json`; auto-backup: 后台自动commit
 - ds2api trap: ds2api用upstream `opencode.ai/zen/go/v1`(19模型,无-free); v3用`opencode.ai/zen/v1/chat/completions`(48模型含-free)
 - GUI version: `v3.xxx + short_hash + (date)`, ldflags: `-X main.buildVersion=v${VERSION} -X main.buildCommit=${COMMIT} -X main.buildTime=${DATE}`
