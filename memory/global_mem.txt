@@ -194,7 +194,7 @@
 
 ## SSH Keys (2026-06-28)
 - **main_vps_key**: `~/.ssh/main_vps_key` (2048 RSA, SHA256:ZVzx17UtKL3roNC3ulSBXtlbwnKamp2YUjpBGLlcONg) — 通用 VPS key，多台 VPS 共用。来源: MobaXterm PPK 转换
-  - **20122102.xyz (root)** (17 hosts): amtaa, amtab, amtac, jpkaaa, jpkab, jpkac, jpkba, jpkbb, jpkbc, krkaa, krkab, krkac, krkad, krkca, krkcb, krrea, krreb
+  - **20122102.xyz (root)** (16 hosts): amtaa, amtab, amtac, jpkaaa, jpkab, jpkba, jpkbb, jpkbc, krkaa, krkab, krkac, krkad, krkca, krkcb, krrea, krreb
   - 全部已在 `~/.ssh/config` 配置，直接 `ssh <host>` 即可
 - **jpkbb key**: `~/.ssh/id_rsa` (4096 RSA, yukk@yukk) — jpkbb (100.127.66.71 / jpkbb.tail46c2fb.ts.net) 专用，无 `-i` 时默认尝试
 
@@ -210,7 +210,7 @@
 - **2026-06-28 Phase A (20.04→22.04)**: 10/11 ✅. Fixed jpkab (dpkg+old kernel), jpkbc (stuck). jpkac still down — user handling panel reboot.
 - **DDNS fix**: All ddns/ddns6 containers updated with new CF API token, all Up across 10 VPS.
 - **SOP rewrite**: ocip_os_upgrade_sop.md → writing-great-skills applied (30% reduction), VPS inventory table added, DDNS recovery section.
-- **Phase B (22.04→24.04)**: Pending jpkac recovery + user decision.
+- **Phase B (22.04→24.04)**: ✅ Completed 2026-06-29. 10/10 VPS on Ubuntu 24.04.4 LTS + kernel 6.8.0-124-generic. jpkac VPS deleted (ARM, never completed Phase A). kernel_fix mandatory after upgrade (6/10 needed `update-grub`). ddns6 bridge mode + INTERFACE=ens3 → use `--net=host`.
 
 ## Boss Mode (2026-06-28)
 - **SOP**: memory/boss_sop.md — self-execution lock added
