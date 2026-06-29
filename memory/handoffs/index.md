@@ -12,7 +12,8 @@ intent: "Central registry of session handoffs"
 *(no active handoffs)*
 
 ## In Progress
-- [aochebeishang] [澳车北上 — LDPlayer + WSL ADB 监控设置]()  *(picked up)*
+- [migration-dashboard] [Custom CLI input file + upload fixes (2026-06-29)](../memory/handoffs/migration-dashboard-input-2026-06-29.md) *(pending upload verification)*
+- [aochebeishang] [澳车北上 — LDPlayer + WSL ADB 监控设置](../memory/handoffs/2026-06-27-aochebeishang-ldplayer.md) *(on hold)*
 
 ## Recently Completed
 - ~~[Handoff — 2026-06-22  CIARS maintenance + /setup-matt-pocock-skills](2026-06-22-ciars-setup-matt-pocock-skills.md)~~
