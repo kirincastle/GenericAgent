@@ -111,3 +111,27 @@ The system prompt is built by `ga.py` → `get_global_memory()`:
 - Python 3.x, dependencies in `pyproject.toml`.
 - Key config: `mykey.py` (template: `mykey_template.py` / `mykey_template_en.py`).
 - Chrome extension for web automation (bundled).
+
+
+## Global Rules
+
+### Language & format convention
+
+- **Conversation**: use Simplified Chinese when talking to the user. Technical terms (function names, CLI flags, protocols, etc.) may stay in English.
+- **Documentation & code**: everything else (docstrings, comments, AGENTS.md, CLAUDE.md, TASKS.md, README, commit messages, PR descriptions, changelogs) must be written in **English**.
+- **Document format**: if the primary reader is an agent/automation, use structured data formats (json, jsonl, yaml, toml). If the primary reader is a human, use presentation formats (md, html, csv, txt, pdf).
+  - AGENTS.md / CLAUDE.md → markdown (human + agent hybrid, md is the de facto standard)
+  - TASKS.md → markdown (human readable)
+  - Machine-only config → json/yaml/toml
+  - Reports/tables meant for humans → md/html/csv
+
+### Deploy summary rule
+
+After any deploy (copy to Windows destination), the final response MUST include:
+- version (`cat version.txt`)
+- git short hash (`git rev-parse --short HEAD`)
+- deploy destination paths and success/failure status
+
+### Windows exe lock auto-kill rule
+
+When `cp` to Windows destination fails with `Permission denied` because the exe holds a lock, auto-kill it with `cmd.exe /c "taskkill /f /im <exe-name>.exe 2>nul"` then retry. Only ask the user when taskkill itself fails.
