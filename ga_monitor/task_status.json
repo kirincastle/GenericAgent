@@ -1,0 +1,26 @@
+{
+  "tasks": {
+    "ocip-monitor-phase-b": {
+      "id": "ocip-monitor-phase-b",
+      "started_at": "2026-06-28T07:26:09Z",
+      "title": "OCIP Phase B Dispatch",
+      "type": "ocip_upgrade",
+      "status": "running",
+      "progress_pct": 70,
+      "message": "Phase A: ALL 11 VPS on 22.04✅. Phase B handoff created. 3 VPS pending kernel_fix reboot. Dispatching Phase B.",
+      "last_update": "2026-06-28T07:41:35Z"
+    }
+  },
+  "types": {
+    "ocip_upgrade": {
+      "total": 1,
+      "running": 1,
+      "completed": 0,
+      "failed": 0,
+      "pending": 0,
+      "stuck": 0,
+      "cancelled": 0
+    }
+  },
+  "last_updated": "2026-06-28T07:41:35Z"
+}

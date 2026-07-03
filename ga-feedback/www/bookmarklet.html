@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<title>GA 反馈工具 — Bookmarklet</title>
+<style>
+  body{font-family:-apple-system,sans-serif;max-width:600px;margin:40px auto;padding:0 20px;line-height:1.6;color:#333}
+  h1{font-size:22px;margin-bottom:8px}
+  .sub{color:#666;font-size:14px;margin-bottom:24px}
+  .bookmarklet{display:inline-block;padding:12px 24px;background:#1a73e8;color:#fff;text-decoration:none;border-radius:8px;font-size:16px;font-weight:600;cursor:grab;box-shadow:0 2px 8px rgba(26,115,232,0.3)}
+  .bookmarklet:hover{background:#1557b0;box-shadow:0 4px 12px rgba(26,115,232,0.4)}
+  .bookmarklet:active{cursor:grabbing}
+  .steps{background:#f8f9fa;border-radius:10px;padding:16px 20px;margin:20px 0}
+  .steps li{margin:8px 0}
+  code{background:#e8e8e8;padding:2px 6px;border-radius:3px;font-size:13px}
+  .status{background:#e8f5e9;border:1px solid #a5d6a7;border-radius:8px;padding:12px 16px;margin:16px 0;font-size:14px}
+  .status.fail{background:#ffebee;border-color:#ef9a9a}
+  .footer{margin-top:40px;font-size:12px;color:#999}
+</style>
+</head>
+<body>
+  <h1>📝 GA 反馈工具</h1>
+  <div class="sub">在任何本地页面上框选元素 + 打字反馈 → 统一发送到 Agent</div>
+
+  <div id="server-status" class="status">⏳ 检查服务器连接...</div>
+
+  <div class="steps">
+    <h3>📋 安装步骤</h3>
+    <ol>
+      <li>把下面的按钮 <strong>拖到 Chrome 书签栏</strong></li>
+      <li>打开任何你想要反馈的本地页面（如 <code>localhost:8088</code>）</li>
+      <li>点击书签栏的 <strong>GA反馈</strong></li>
+      <li>右下角出现 📝 按钮 → 框选元素 → 输入意见 → 收集多条 → 发送</li>
+    </ol>
+  </div>
+
+  <a class="bookmarklet" id="ga-bookmarklet" href="javascript:void(0)">📌 GA反馈</a>
+  <p style="font-size:13px;color:#666;margin-top:8px">↑ 拖到书签栏</p>
+
+  <h3 style="margin-top:32px">使用说明</h3>
+  <ul>
+    <li><strong>🔲 框选元素</strong> — 鼠标移到元素上高亮，点击选中，输入修改意见</li>
+    <li><strong>📎 选择文本</strong> — 选中一段文字，点击文字区域，输入意见</li>
+    <li><strong>📤 发送反馈</strong> — 所有反馈一次性发到 WSL 服务器，Agent 自动处理</li>
+  </ul>
+
+  <div class="footer">
+    GA Feedback v3 — WSL ga-feedback-server :9876
+  </div>
+
+<script>
+// Set up bookmarklet href
+(function(){
+  var code = "javascript:(function(){var d=document;var s=d.createElement('script');s.src='http://localhost:9876/ga-feedback.js?v='+Date.now();d.body.appendChild(s);})();";
+  document.getElementById('ga-bookmarklet').href = code;
+  
+  // Check server status
+  fetch('/api/health').then(function(r){return r.json()}).then(function(d){
+    var el = document.getElementById('server-status');
+    if(d.status === 'ok'){
+      el.innerHTML = '✅ 服务器运行中 — 端口 ' + d.port;
+      el.className = 'status';
+    }
+  }).catch(function(){
+    var el = document.getElementById('server-status');
+    el.innerHTML = '❌ 服务器未连接 — 请确保 WSL 上已启动 ga-feedback-server';
+    el.className = 'status fail';
+  });
+})();
+</script>
+</body>
+</html>

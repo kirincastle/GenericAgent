@@ -1,0 +1,615 @@
+[
+  {
+    "type": "test",
+    "note": "plain text test"
+  },
+  {
+    "feedbacks": [
+      {
+        "type": "element",
+        "note": "\u6d4b\u8bd5",
+        "time": 1782459379033
+      },
+      {
+        "type": "text",
+        "note": "\u6d4b\u8bd52",
+        "time": 1782459392249,
+        "text": "",
+        "xpath": ""
+      }
+    ],
+    "url": "http://100.127.66.71:8000/",
+    "title": "OPENCODE TO API \u7ba1\u7406\u9762\u677f",
+    "time": 1782459393450
+  },
+  {
+    "feedbacks": [
+      {
+        "type": "element",
+        "note": "test 1",
+        "time": 1782459474027
+      }
+    ],
+    "url": "http://100.127.66.71:8000/",
+    "title": "OPENCODE TO API \u7ba1\u7406\u9762\u677f",
+    "time": 1782459477542
+  },
+  {
+    "feedbacks": [
+      {
+        "type": "element",
+        "note": "diagnostic test",
+        "time": 123
+      }
+    ],
+    "url": "http://test",
+    "title": "test",
+    "time": 456
+  },
+  {
+    "feedbacks": [
+      {
+        "type": "test",
+        "note": "systemd test",
+        "time": 999
+      }
+    ],
+    "url": "http://test",
+    "title": "test",
+    "time": 999
+  },
+  {
+    "feedbacks": [
+      {
+        "type": "element",
+        "note": "test",
+        "time": 1782466250159
+      }
+    ],
+    "url": "http://100.127.66.71:8000/",
+    "title": "OPENCODE TO API \u7ba1\u7406\u9762\u677f",
+    "time": 1782466250928
+  },
+  {
+    "feedbacks": [
+      {
+        "type": "element",
+        "note": "systemd restart test",
+        "time": 777
+      }
+    ],
+    "url": "http://test",
+    "title": "test",
+    "time": 777
+  },
+  {
+    "feedbacks": [
+      {
+        "type": "element",
+        "note": "test",
+        "time": 1782466492403
+      }
+    ],
+    "url": "http://100.127.66.71:8000/",
+    "title": "OPENCODE TO API \u7ba1\u7406\u9762\u677f",
+    "time": 1782466493331
+  },
+  {
+    "feedbacks": [
+      {
+        "type": "element",
+        "note": "test",
+        "time": 1782466492403
+      }
+    ],
+    "url": "http://100.127.66.71:8000/",
+    "title": "OPENCODE TO API \u7ba1\u7406\u9762\u677f",
+    "time": 1782467083728
+  },
+  {
+    "feedbacks": [
+      {
+        "type": "diag",
+        "note": "browser-test"
+      }
+    ],
+    "url": "http://100.127.66.71:8000/",
+    "title": "OPENCODE TO API \u7ba1\u7406\u9762\u677f",
+    "time": 1782468516500
+  },
+  {
+    "feedbacks": [
+      {
+        "type": "test",
+        "note": "browser test",
+        "time": 1782468590038
+      }
+    ],
+    "url": "http://100.127.66.71:8000/",
+    "title": "OPENCODE TO API \u7ba1\u7406\u9762\u677f",
+    "time": 1782468590038
+  },
+  {
+    "feedbacks": [
+      {
+        "type": "browser_test",
+        "note": "direct XHR test",
+        "time": 1782469073158
+      }
+    ],
+    "url": "http://test",
+    "title": "test",
+    "time": 1782469073158
+  },
+  {
+    "test": true
+  },
+  {
+    "x": 1
+  },
+  {
+    "feedbacks": [
+      {
+        "type": "element",
+        "note": "test1",
+        "time": 1782471740139
+      }
+    ],
+    "url": "http://100.127.66.71:8000/",
+    "title": "OPENCODE TO API \u7ba1\u7406\u9762\u677f",
+    "time": 1782471741183
+  },
+  {
+    "feedbacks": [
+      {
+        "type": "element",
+        "note": "test 2",
+        "time": 1782471874716
+      },
+      {
+        "type": "text",
+        "note": "test 3",
+        "time": 1782471880557,
+        "text": "",
+        "xpath": ""
+      }
+    ],
+    "url": "http://100.127.66.71:8000/",
+    "title": "OPENCODE TO API \u7ba1\u7406\u9762\u677f",
+    "time": 1782471881441
+  },
+  {
+    "feedbacks": [
+      {
+        "type": "element",
+        "note": "test auto-polling: change button color to blue",
+        "time": 1782472000000,
+        "text": "",
+        "xpath": ""
+      }
+    ],
+    "url": "http://localhost:8000/test",
+    "title": "Test Page",
+    "time": 1782472000000
+  },
+  {
+    "feedbacks": [
+      {
+        "type": "element",
+        "note": "test 1",
+        "time": 1782483745479
+      }
+    ],
+    "url": "http://100.127.66.71:8000/",
+    "title": "OPENCODE TO API \u7ba1\u7406\u9762\u677f",
+    "time": 1782483746356
+  },
+  {
+    "feedbacks": [
+      {
+        "type": "element",
+        "note": "test2",
+        "time": 1782483851308
+      }
+    ],
+    "url": "http://100.127.66.71:8000/",
+    "title": "OPENCODE TO API \u7ba1\u7406\u9762\u677f",
+    "time": 1782483852157
+  },
+  {
+    "feedbacks": [
+      {
+        "type": "element",
+        "note": "\u8fd9\u4e2a\u662f\u4ec0\u4e48\uff1f",
+        "time": 1782483985312
+      },
+      {
+        "type": "text",
+        "note": "\u8fd9\u4e2a\u4ee3\u8868\u4ec0\u4e48\uff1f",
+        "time": 1782484001799,
+        "text": "",
+        "xpath": ""
+      }
+    ],
+    "url": "http://100.127.66.71:8000/",
+    "title": "OPENCODE TO API \u7ba1\u7406\u9762\u677f",
+    "time": 1782484002737
+  },
+  {
+    "feedbacks": [
+      {
+        "type": "element",
+        "note": "test 1",
+        "time": 1782486397992,
+        "tag": "div",
+        "id": "",
+        "classes": "stat-card",
+        "text": "\ud83d\udd73 Tor17,415,284\ud83d\udcf0 17,234,177 \ud83d\udce4 181,107\ud83d\udccb 314 \u26a0\ufe0f 03.1%",
+        "xpath": "/div[1]"
+      },
+      {
+        "type": "text",
+        "note": "\u8fd9\u4e9b\u4ec0\u4e48\u610f\u601d",
+        "time": 1782486427063,
+        "text": "",
+        "xpath": "/html[1]/body[1]/div[1]/div[2]/div[3]/div[1]"
+      }
+    ],
+    "url": "http://100.127.66.71:8000/",
+    "title": "OPENCODE TO API \u7ba1\u7406\u9762\u677f",
+    "time": 1782486428052
+  },
+  {
+    "feedbacks": [
+      {
+        "type": "element",
+        "note": "\u8fd9\u4e2a\u79bb\u7ebf\u4e86 \u8981\u67e5\u4e00\u4e0b",
+        "time": 1782486678300,
+        "tag": "span",
+        "id": "",
+        "classes": "",
+        "text": "\u26a0 SG \u79bb\u7ebf",
+        "xpath": "/html[1]/body[1]/div[1]/div[1]/span[4]/span[1]"
+      }
+    ],
+    "url": "http://100.127.66.71:8000/",
+    "title": "OPENCODE TO API \u7ba1\u7406\u9762\u677f",
+    "time": 1782486680501
+  },
+  {
+    "feedbacks": [
+      {
+        "type": "element",
+        "note": "\u9009\u4eca\u5929\u8fd9\u4e2afilter\u7684\u65f6\u5019\uff0c\u4e0b\u9762\u7684\u6570\u636e\u662f\u9519\u7684\uff0c\u67e5\u4e00\u4e0b \u4e3a\u4ec0\u4e48",
+        "time": 1782576296045,
+        "tag": "div",
+        "id": "",
+        "classes": "stats-header",
+        "text": "Token \u7edf\u8ba1\n\n\n\u5168\u90e8\n\u8fd130\u5929\n\u8fd17\u5929\n\u4eca\u5929\n\n\u5237\u65b0\n\u6e05\u7a7a\u7edf\u8ba1",
+        "xpath": "/html[1]/body[1]/div[1]/div[2]/div[1]"
+      }
+    ],
+    "url": "http://100.127.66.71:8000/",
+    "title": "OPENCODE TO API \u7ba1\u7406\u9762\u677f",
+    "time": 1782576297488
+  },
+  {
+    "feedbacks": [
+      {
+        "type": "element",
+        "note": "\u6709\u9519\u8bef\uff0c\u67e5\u4e00\u4e0b",
+        "time": 1782578395963,
+        "tag": "div",
+        "id": "",
+        "classes": "empty-hint",
+        "text": "\u52a0\u8f7d\u5931\u8d25",
+        "xpath": "/div[1]"
+      }
+    ],
+    "url": "http://100.127.66.71:8000/",
+    "title": "OPENCODE TO API \u7ba1\u7406\u9762\u677f",
+    "time": 1782578396793
+  },
+  {
+    "feedbacks": [
+      {
+        "type": "element",
+        "note": "\u8fd9\u4e2a\u592a\u77ed\uff0c\u770b\u4e0d\u5230\u5927\u90e8\u5206\u7684\u4fe1\u606f\uff0c\u53ef\u4ee5\u62c9\u957f\u4e00\u4e9b\uff0c\u5728\u53f3\u8fb9\u52a0scrol bar, \u53ef\u4ee5\u4e0a\u4e0b\u79fb\u52a8\u770b\u5230\u5177\u4f53\u7684turn info?",
+        "time": 1782622260104,
+        "tag": "pre",
+        "id": "",
+        "classes": "",
+        "text": "Turn 6 ...\n\nStep 2 done \u2014 current bullseye packages already up-to-date. Now step 3: swap sources & d",
+        "xpath": "/table[1]/tbody[1]/tr[2]/td[5]/pre[1]"
+      }
+    ],
+    "url": "http://localhost:10000/",
+    "title": "GA Monitor",
+    "time": 1782622263135
+  },
+  {
+    "feedbacks": [
+      {
+        "type": "text",
+        "note": "\u67e5\u4e00\u4e0b \u4e3a\u4ec0\u4e48\u6709\u8fd9\u4e9berror",
+        "time": 1782622684247,
+        "text": "",
+        "xpath": "/html[1]/body[1]"
+      }
+    ],
+    "url": "http://localhost:10000/",
+    "title": "GA Monitor",
+    "time": 1782622685446
+  },
+  {
+    "feedbacks": [
+      {
+        "type": "element",
+        "note": "\u5728\u8fd9\u91cc\u52a0\u4e00\u4e2asample input file button, \u8fd9\u6837\u7528\u6237\u53ef\u4ee5\u4e0b\u8f7dsample",
+        "time": 1782702070873,
+        "tag": "div",
+        "id": "",
+        "classes": "",
+        "text": "Choose File              no file selected",
+        "xpath": "/html[1]/body[1]/div[14]/div[1]/div[2]/div[3]/div[2]"
+      }
+    ],
+    "url": "http://localhost:8088/",
+    "title": "Migration Dashboard",
+    "time": 1782702073242
+  },
+  {
+    "feedbacks": [
+      {
+        "type": "element",
+        "note": "\u5982\u679cinput file\u6709\u95ee\u9898\uff0c\u4f1a\u6709error msg, \u4f46\u662f\u6211\u9700\u8981reset input file, \u91cd\u65b0\u4e0a\u4f20",
+        "time": 1782710193440,
+        "tag": "div",
+        "id": "",
+        "classes": "",
+        "text": "Choose File              cli_input.csv",
+        "xpath": "/html[1]/body[1]/div[14]/div[1]/div[2]/div[3]/div[2]"
+      },
+      {
+        "type": "text",
+        "note": "\u91cd\u65b0\u9009input file\u7684\u65f6\u5019\uff0c\u662f\u5426\u53ef\u4ee5\u91cd\u65b0populate, \u8fd9\u6837\u5c31\u4e0d\u9700\u8981reset input file\u4e86\uff1f",
+        "time": 1782710257417,
+        "text": "",
+        "xpath": "//*[@id=\"ccli-per-device-warnings\"]"
+      }
+    ],
+    "url": "http://localhost:8088/",
+    "title": "Migration Dashboard",
+    "time": 1782710258442
+  },
+  {
+    "feedbacks": [
+      {
+        "type": "element",
+        "note": "\u8fd9\u91cc\u5df2\u7ecf\u6709input file uploaded",
+        "time": 1782717990499,
+        "tag": "div",
+        "id": "",
+        "classes": "",
+        "text": "Choose File              cli_input - 2.json",
+        "xpath": "/html[1]/body[1]/div[14]/div[1]/div[2]/div[3]/div[2]"
+      },
+      {
+        "type": "element",
+        "note": "\u8fd9\u8fb9\u5e94\u8be5\u8981\u770b\u5230\u6bcf\u4e2a\u8bbe\u5907 \u6709\u54ea\u4e9bcli\u8981\u8dd1\u5417\uff1f",
+        "time": 1782718013316,
+        "tag": "textarea",
+        "id": "ccli-commands",
+        "classes": "",
+        "text": "",
+        "xpath": "//*[@id=\"ccli-commands\"]"
+      }
+    ],
+    "url": "http://localhost:8088/",
+    "title": "Migration Dashboard",
+    "time": 1782718014956
+  },
+  {
+    "feedbacks": [
+      {
+        "type": "element",
+        "note": "\u8fd9\u91cc\u5e94\u8be5\u663e\u793a\u54ea\u4e9b\u662f\u5df2\u7ecf\u901a\u8fc7input file \u88ab\u9009\u4e2d\uff1f",
+        "time": 1782718054525,
+        "tag": "div",
+        "id": "",
+        "classes": "",
+        "text": "Devices\n            All VendorsCiscoF5FortinetHuaweiPaloalto\n            \n            0 selected\n   ",
+        "xpath": "/html[1]/body[1]/div[14]/div[1]/div[2]/div[2]"
+      }
+    ],
+    "url": "http://localhost:8088/",
+    "title": "Migration Dashboard",
+    "time": 1782718055301
+  },
+  {
+    "feedbacks": [
+      {
+        "type": "element",
+        "note": "filter\u8981\u68c0\u67e5\u4e00\u4e0b\uff0c\u6bd4\u5982\u201c\u4eca\u5929\u201d\u8fd9\u4e2afilter, \u662f\u5426\u6570\u636e\u662f\u6b63\u786e\u7684\uff0c\u5e94\u8be5\u8981\u5728hkt 0:00\u7684\u65f6\u5019\u5f00\u59cb\u8ba1\u7b97\u7684 \u6211\u65e9\u4e0a\u770b\u7684\u65f6\u5019\uff0c\u4f3c\u4e4e\u662f\u628a\u6628\u5929\u7684\u6570\u636e\u4e5f\u7d2f\u79ef\u8fc7\u6765\u4e86\uff0ccut off\u65f6\u95f4\u662f\u4ec0\u4e48\u65f6\u5019\uff1f",
+        "time": 1782787667073,
+        "tag": "div",
+        "id": "",
+        "classes": "stats-header",
+        "text": "Token \u7edf\u8ba1\n\n\n\u5168\u90e8\n\u8fd130\u5929\n\u8fd17\u5929\n\u4eca\u5929\n\n\u5237\u65b0\n\u6e05\u7a7a\u7edf\u8ba1",
+        "xpath": "/html[1]/body[1]/div[1]/div[2]/div[1]"
+      }
+    ],
+    "url": "http://100.127.66.71:8000/",
+    "title": "OPENCODE TO API \u7ba1\u7406\u9762\u677f",
+    "time": 1782787668653
+  },
+  {
+    "feedbacks": [
+      {
+        "type": "element",
+        "note": "\u4f60\u67e5\u770b\u4e00\u4e0bpa fw\u7684cli\u7684\u903b\u8f91\uff0c\u5982\u679c\u4e00\u5f00\u59cb \u5728pa fw\u7684vsys\u8fd9\u8fb9 \u6709\u914d\u7f6e\u4e86vsys1,vsys2,vsys3,vsys4. \u7136\u540e\u5728custom cli \u90a3\u8fb9 \u53c8\u914d\u7f6e\u4e86   \n  {\n    \"device\": \"10.244.1.19\",\n    \"commands\": [\n      \"show routing route\",\n      \"show routing protocol bgp rib-out virtual-router vsys1\",\n      \"show routing protocol bgp rib-out virtual-router vsys2\",\n      \"show routing protocol bgp rib-out virtual-router vsys3\",\n      \"show routing protocol bgp rib-out virtual-router vsys4\",\n      \"show routing protocol bgp loc-rib virtual-router vsys1\",\n      \"show routing protocol bgp loc-rib virtual-router vsys2\",\n      \"show routing protocol bgp loc-rib virtual-router vsys3\",\n      \"show routing protocol bgp loc-rib virtual-router vsys4\",\n      \"show routing protocol bgp policy export\",\n      \"show routing protocol bgp peer\",\n      \"show interface all\"\n    ]\n  }\n \u4f1a\u4e0d\u4f1a\u5bfc\u81f4\u5931\u8d25",
+        "time": 1782811667359,
+        "tag": "div",
+        "id": "",
+        "classes": "card",
+        "text": "Device\n            Vendor\n            Contexts (VDOMs or VSYSs)\n          \n          \n              ",
+        "xpath": "/html[1]/body[1]/div[4]/div[2]/div[2]"
+      }
+    ],
+    "url": "http://localhost:8088/",
+    "title": "Migration Dashboard",
+    "time": 1782811668511
+  },
+  {
+    "feedbacks": [
+      {
+        "type": "element",
+        "note": "\u590d\u5236\u5230remote pc\u4e4b\u540e\uff0c\u6d4b\u8bd5\u7684\u65f6\u5019\uff0c\u53d1\u73b0not working, and no console logs too.\n\n\u8fd8\u6709\u5c31\u662f\u65e0\u6cd5cancel.",
+        "time": 1782814616454,
+        "tag": "span",
+        "id": "",
+        "classes": "",
+        "text": "Backup Config",
+        "xpath": "/html[1]/body[1]/div[4]/div[1]/div[4]/button[3]/span[1]"
+      },
+      {
+        "type": "element",
+        "note": "\u6bcf\u4e2adevice\u8fd9\u4e2a\u90fdby default ticked.",
+        "time": 1782814671928,
+        "tag": "label",
+        "id": "",
+        "classes": "ccli-pde-only-label",
+        "text": "DeviceOnlyCustom (skip global commands)",
+        "xpath": "/html[1]/body[1]/div[14]/div[1]/div[2]/div[2]/div[2]/div[2]/div[4]/div[2]/label[1]"
+      },
+      {
+        "type": "element",
+        "note": "\u6309execute\u4e4b\u540e\uff0cresults \u90a3\u8fb9 \u663e\u793a \u201cat least enter one command\u201d",
+        "time": 1782814720374,
+        "tag": "button",
+        "id": "ccli-execute-btn",
+        "classes": "",
+        "text": "Execute",
+        "xpath": "//*[@id=\"ccli-execute-btn\"]"
+      },
+      {
+        "type": "element",
+        "note": "\u589e\u52a0\u4e00\u4e2areset button, reset to factory default",
+        "time": 1782814744984,
+        "tag": "div",
+        "id": "",
+        "classes": "",
+        "text": "Choose File              cli_input - 2.json",
+        "xpath": "/html[1]/body[1]/div[14]/div[1]/div[2]/div[3]/div[2]"
+      }
+    ],
+    "url": "http://localhost:8088/",
+    "title": "Migration Dashboard",
+    "time": 1782814745655
+  },
+  {
+    "feedbacks": [
+      {
+        "type": "text",
+        "note": "\"D:\\Prompt\\migration-dashboard\\pwd_sample - Copy - \u526f\u672c.txt\"\n\"D:\\Prompt\\migration-dashboard\\devices_sample.csv\"\n\nPress Enter when ready...\n\nMigration Dashboard v3.1387 (Build: 63805d8)\n\n  Restarting on port 8088...\n2026/07/01 08:05:38 main.go:109: Migration Dashboard starting...\n2026/07/01 08:05:38 main.go:110: Version: v3.1387 (Build: 63805d8)\n2026/07/01 08:05:38 main.go:114: Log file: D:\\Prompt\\migration-dashboard/dashboard.log\n2026/07/01 08:05:38 main.go:118: DB file: dashboard.db (use VACUUM to reclaim space after cleanup)\n2026/07/01 08:05:38 main.go:142: Read-only mode -- no devices.csv found\n2026/07/01 08:05:38 asyncjob.go:238: [AsyncJob] Background worker + GC started\n2026/07/01 08:05:38 fw_hitcount.go:1334: [fw-hitcount] loaded config for 3 devices, auto=true interval=12m\n2026/07/01 08:05:38 server.go:189: [AutoCollect] disabled (read-only or no devices)\n2026/07/01 08:05:38 pingmon.go:116: [pingmon] started (interval=2s, maxConcurrent=20)\n2026/07/01 08:05:38 main.go:245: Starting web server on http://localhost:8088\n2026/07/01 08:05:38 main.go:247: Mode: READ-ONLY (browse historical data only)\n\n========================================\n  Restarted at: http://localhost:8088\n  Server PID: 15700\n  Type 'r' + Enter to rebuild and restart.\n  Type 'q' + Enter to stop.\n========================================\n\n2026/07/01 08:05:46 server.go:202: [AutoCollect] started: every 10m0s (10 devices)\n2026/07/01 08:05:46 server.go:1721: [Config] loaded 10 devices from D:/Prompt/migration-dashboard/devices_sample.csv\n2026/07/01 08:06:00 customcli_stream.go:208: [CustomCLI-DEBUG] HandleCustomCLIStream called\n2026/07/01 08:06:00 customcli_stream.go:222: [CustomCLI-DEBUG] Request: 4 devices, 0 global commands, source=\"collection\", passwordFile=\"D:/Prompt/migration-dashboard/pwd_sample.txt\"\n2026/07/01 08:06:00 customcli_stream.go:225: [CustomCLI-DEBUG]   Device[0]: \"D03TKOSP01\"\n2026/07/01 08:06:00 customcli_stream.go:225: [CustomCLI-DEBUG]   Device[1]: \"DTKOCCILBR01\"\n2026/07/01 08:06:00 customcli_stream.go:225: [CustomCLI-DEBUG]   Device[2]: \"DEQXCCIFW01\"\n2026/07/01 08:06:00 customcli_stream.go:225: [CustomCLI-DEBUG]   Device[3]: \"D03TKOFG01\"\n2026/07/01 08:06:00 customcli_stream.go:227: [CustomCLI-DEBUG] DeviceCommands keys: 4\n2026/07/01 08:06:00 customcli_stream.go:229: [CustomCLI-DEBUG]   PerDevice: \"D03TKOFG01\" -> 2 commands\n2026/07/01 08:06:00 customcli_stream.go:229: [CustomCLI-DEBUG]   PerDevice: \"D03TKOSP01\" -> 3 commands\n2026/07/01 08:06:00 customcli_stream.go:229: [CustomCLI-DEBUG]   PerDevice: \"DEQXCCIFW01\" -> 3 commands\n2026/07/01 08:06:00 customcli_stream.go:229: [CustomCLI-DEBUG]   PerDevice: \"DTKOCCILBR01\" -> 3 commands\n2026/07/01 08:06:00 customcli_stream.go:249: [CustomCLI-DEBUG] Loaded 1 credential(s): [nooper2]\n2026/07/01 08:06:00 customcli_stream.go:255: [CustomCLI-DEBUG] Using 10 cached devices for device matching\n2026/07/01 08:06:00 customcli_stream.go:267: [CustomCLI-DEBUG] Matched device: \"D03TKOSP01\" -> D03TKOSP01 (10.244.0.11, cisco)\n2026/07/01 08:06:00 customcli_stream.go:267: [CustomCLI-DEBUG] Matched device: \"DTKOCCILBR01\" -> DTKOCCILBR01 (10.244.1.13, huawei)\n2026/07/01 08:06:00 customcli_stream.go:267: [CustomCLI-DEBUG] Matched device: \"DEQXCCIFW01\" -> DEQXCCIFW01 (10.248.1.16, paloalto)\n2026/07/01 08:06:00 customcli_stream.go:267: [CustomCLI-DEBUG] Matched device: \"D03TKOFG01\" -> D03TKOFG01 (10.244.0.83, fortinet)\n2026/07/01 08:06:00 customcli_stream.go:100: [CustomCLI-DEBUG] ExecuteStream started with 4 requested devices, 4 matched\n2026/07/01 08:06:00 customcli_stream.go:309: [CustomCLI-DEBUG] Starting SSE loop for job cli-1782864360 (4 matched devices)\n2026/07/01 08:06:00 customcli_stream.go:114: [CustomCLI-DEBUG] ExecuteStream processing device: \"D03TKOSP01\"\n2026/07/01 08:06:00 customcli_stream.go:114: [CustomCLI-DEBUG] ExecuteStream processing device: \"DTKOCCILBR01\"\n2026/07/01 08:06:00 customcli_stream.go:114: [CustomCLI-DEBUG] ExecuteStream processing device: \"DEQXCCIFW01\"\n2026/07/01 08:06:00 customcli_stream.go:114: [CustomCLI-DEBUG] ExecuteStream processing device: \"D03TKOFG01\"\n2026/07/01 08:06:00 customcli_stream.go:197: [CustomCLI-DEBUG] ExecuteStream finished: totalCmds=11, completed=0, failed=0\n2026/07/01 08:06:00 customcli_stream.go:324: [CustomCLI-DEBUG] SSE event: event=\"session_meta\" data_type=session_meta\n2026/07/01 08:06:00 customcli_stream.go:324: [CustomCLI-DEBUG] SSE event: event=\"error\" data_type=error\n2026/07/01 08:06:00 customcli_stream.go:324: [CustomCLI-DEBUG] SSE event: event=\"error\" data_type=error\n2026/07/01 08:06:00 customcli_stream.go:324: [CustomCLI-DEBUG] SSE event: event=\"error\" data_type=error\n2026/07/01 08:06:00 customcli_stream.go:324: [CustomCLI-DEBUG] SSE event: event=\"error\" data_type=error\n2026/07/01 08:06:00 customcli_stream.go:324: [CustomCLI-DEBUG] SSE event: event=\"session_done\" data_type=session_done\n2026/07/01 08:06:00 customcli_stream.go:322: [CustomCLI-DEBUG] SSE channel closed, finishing\n2026/07/01 08:06:00 customcli_stream.go:324: [CustomCLI-DEBUG] SSE event: event=\"\" data_type=unknown\n2026/07/01 08:06:00 customcli_stream.go:306: [CustomCLI-DEBUG] FileWriter flushing for job cli-1782864360\n\nwhy no credential?",
+        "time": 1782867076422,
+        "text": "",
+        "xpath": "/html[1]/body[1]/div[14]/div[1]/div[2]"
+      }
+    ],
+    "url": "http://localhost:8088/",
+    "title": "Migration Dashboard",
+    "time": 1782867077358
+  },
+  {
+    "feedbacks": [
+      {
+        "type": "element",
+        "note": "\u8fd9\u4e2a\u529f\u80fd \u662f\u5e72\u561b\u7684",
+        "time": 1782868740502,
+        "tag": "button",
+        "id": "ccli-async-btn",
+        "classes": "",
+        "text": "Run Async",
+        "xpath": "//*[@id=\"ccli-async-btn\"]"
+      }
+    ],
+    "url": "http://localhost:8088/",
+    "title": "Migration Dashboard",
+    "time": 1782868741424
+  },
+  {
+    "feedbacks": [
+      {
+        "type": "element",
+        "note": "json file uploaded\u4e4b\u540e\uff0c\u8fd9\u91cc\u663e\u793a [\u6536\u8d77] C\n\n\u5f88\u5947\u602a\uff0c\u591a\u4e86\u4e00\u4e2aC",
+        "time": 1783087394907,
+        "tag": "div",
+        "id": "",
+        "classes": "ccli-device-hdr",
+        "text": "DEQXCCIFW01 -- 10.248.1.16 [paloalto]         [\u6536\u8d77\u25b2]        C",
+        "xpath": "/html[1]/body[1]/div[14]/div[1]/div[2]/div[2]/div[2]/div[2]/div[3]/div[1]"
+      },
+      {
+        "type": "element",
+        "note": "FG\u7684textarea\u5728\u4e0b\u9762 \u6709\u770b\u5230\u6211\u4eec\u8981\u8dd1\u7684\u90a3\u6761\u547d\u4ee4",
+        "time": 1783087438819,
+        "tag": "div",
+        "id": "",
+        "classes": "ccli-device-hdr",
+        "text": "D03TKOFG01 -- 10.244.0.83 [fortigate]         [\u6536\u8d77\u25b2]        C",
+        "xpath": "/html[1]/body[1]/div[14]/div[1]/div[2]/div[2]/div[2]/div[2]/div[2]/div[1]"
+      }
+    ],
+    "url": "http://localhost:8088/",
+    "title": "Migration Dashboard",
+    "time": 1783087440055
+  },
+  {
+    "feedbacks": [
+      {
+        "type": "element",
+        "note": "\u8fd9\u4e2a\u5c31\u662fC",
+        "time": 1783088230871,
+        "tag": "span",
+        "id": "",
+        "classes": "ccli-has-custom-badge",
+        "text": "C",
+        "xpath": "/html[1]/body[1]/div[14]/div[1]/div[2]/div[2]/div[2]/div[1]/div[2]/div[1]/span[2]"
+      },
+      {
+        "type": "element",
+        "note": "C",
+        "time": 1783088236534,
+        "tag": "span",
+        "id": "",
+        "classes": "ccli-has-custom-badge",
+        "text": "C",
+        "xpath": "/html[1]/body[1]/div[14]/div[1]/div[2]/div[2]/div[2]/div[2]/div[2]/div[1]/span[2]"
+      },
+      {
+        "type": "element",
+        "note": "C",
+        "time": 1783088242488,
+        "tag": "span",
+        "id": "",
+        "classes": "ccli-has-custom-badge",
+        "text": "C",
+        "xpath": "/html[1]/body[1]/div[14]/div[1]/div[2]/div[2]/div[2]/div[2]/div[3]/div[1]/span[2]"
+      },
+      {
+        "type": "element",
+        "note": "C",
+        "time": 1783088248734,
+        "tag": "span",
+        "id": "",
+        "classes": "ccli-has-custom-badge",
+        "text": "C",
+        "xpath": "/html[1]/body[1]/div[14]/div[1]/div[2]/div[2]/div[2]/div[2]/div[4]/div[1]/span[2]"
+      }
+    ],
+    "url": "http://localhost:8088/",
+    "title": "Migration Dashboard",
+    "time": 1783088249912
+  }
+]
