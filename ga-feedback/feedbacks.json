@@ -611,5 +611,32 @@
     "url": "http://localhost:8088/",
     "title": "Migration Dashboard",
     "time": 1783088249912
+  },
+  {
+    "feedbacks": [
+      {
+        "type": "element",
+        "note": "\u90fd\u662f\u6ca1\u6709\u6570\u636e\u7684 \u8fd9\u4e2a\u662fjpkaaa oc2api",
+        "time": 1783480866293,
+        "tag": "div",
+        "id": "",
+        "classes": "card",
+        "text": "Token \u7edf\u8ba1\n\n\n\u5168\u90e8\n\u8fd130\u5929\n\u8fd17\u5929\n\u4eca\u5929\n\n\u5237\u65b0\n\u6e05\u7a7a\u7edf\u8ba1\n\n\n\n\u2728 \u603b Token0\ud83d\udcf0 \u8f93\u51650\ud83d\udce4 \u8f93\u51fa0\ud83d\udccb \u8bf7\u6c420\u26a0\ufe0f 4290\n\ud83d\ude80 \u76f4\u8fde0\ud83d\udcf0 0 \ud83d\udce4 0\ud83d\udccb 0 \u26a0\ufe0f 00.",
+        "xpath": "/html[1]/body[1]/div[1]/div[2]"
+      },
+      {
+        "type": "element",
+        "note": "\u662f\u8fd9\u4e2a\u7248\u672c",
+        "time": 1783480874564,
+        "tag": "div",
+        "id": "versionInfo",
+        "classes": "logo-sub",
+        "text": "v3.100 c6606ba (2026-07-08)",
+        "xpath": "//*[@id=\"versionInfo\"]"
+      }
+    ],
+    "url": "http://jpkaaa:8000/",
+    "title": "OPENCODE TO API \u7ba1\u7406\u9762\u677f",
+    "time": 1783480875378
   }
 ]
