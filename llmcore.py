@@ -37,7 +37,7 @@ def __getattr__(name):  # once guard in PEP 562
     if name == 'mykeys': return reload_mykeys()[0]
     raise AttributeError(f"module 'llmcore' has no attribute {name}")
 
-def compress_history_tags(messages, keep_recent=6, max_len=400, force=False, interval=5):
+def compress_history_tags(messages, keep_recent=10, max_len=800, force=False, interval=5):
     """Compress <thinking>/<tool_use>/<tool_result> tags in older messages to save tokens."""
     compress_history_tags._cd = getattr(compress_history_tags, '_cd', 0) + 1
     if force: compress_history_tags._cd = 0
@@ -95,21 +95,8 @@ def safeprint(*argv):
     except OSError: pass
 print = safeprint
 
-def _slide_window_history(history, max_num_turns):
-    """滑动窗口：保留第一轮 + 最近 N-1 轮。max_num_turns≤0 不生效。"""
-    if max_num_turns <= 0 or len(history) < 2:
-        return
-    user_indices = [i for i, m in enumerate(history) if m['role'] == 'user']
-    if len(user_indices) <= max_num_turns:
-        return
-    # 保留第一轮，以及最后 max_num_turns-1 轮
-    keep = max_num_turns - 1
-    start = user_indices[-keep]
-    history[:] = history[:2] + history[start:]
-
 def trim_messages_history(history, sess):
-    _slide_window_history(history, getattr(sess, 'max_num_turns', 0))
-    cap = sess.context_win * 2
+    cap = sess.context_win * 3
     target = int(cap * getattr(sess, 'trim_keep_rate', 0.6))
     def cost(): return sum(len(json.dumps(m, ensure_ascii=False)) for m in history)
     compress_history_tags(history, interval=getattr(sess, 'cut_msg_interval', 5))
@@ -323,8 +310,7 @@ def _record_usage(usage, api_mode):
         print(f"[Cache] input={inp} cached={cached}")
         if out: print(f"[Output] tokens={out}")
     elif api_mode == 'chat_completions':
-        cached = (usage.get("prompt_tokens_details") or {}).get("cached_tokens", 0) or \
-                 usage.get('prompt_cache_hit_tokens', 0) or 0
+        cached = (usage.get("prompt_tokens_details") or {}).get("cached_tokens", 0)
         inp = usage.get("prompt_tokens", 0); out = usage.get("completion_tokens", 0)
         print(f"[Cache] input={inp} cached={cached}")
         if out: print(f"[Output] tokens={out}")
@@ -542,13 +528,15 @@ class BaseSession:
         self.api_key = cfg['apikey']
         self.api_base = cfg['apibase'].rstrip('/')
         self.model = cfg.get('model', '')
-        self.max_num_turns = cfg.get('max_num_turns', 0)
         default_context_win = 30000
         if 'deepseek' in self.model.lower():
-            default_context_win = 70000; self.cut_msg_interval = 3; self.trim_keep_rate = 0.3
+            default_context_win = 70000; self.cut_msg_interval = 25; self.trim_keep_rate = 0.3
         self.context_win = cfg.get('context_win', default_context_win)
         self.history = []; self.lock = threading.Lock(); self.system = ""
         self.name = cfg.get('name', self.model)
+        self.extra_sys_prompt = cfg.get('extra_sys_prompt', '')
+        if cfg.get('extra_sys_prompt_file'):
+            self.extra_sys_prompt = (self.extra_sys_prompt or '') + open(cfg['extra_sys_prompt_file'] if os.path.isabs(cfg['extra_sys_prompt_file']) else os.path.join(_ROOT, cfg['extra_sys_prompt_file']), encoding='utf-8').read()
         proxy = cfg.get('proxy'); 
         self.proxies = {"http": proxy, "https": proxy} if proxy else None
         self.max_retries = max(0, int(cfg.get('max_retries', 4)))
