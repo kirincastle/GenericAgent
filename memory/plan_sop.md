@@ -113,7 +113,7 @@ handler是inline_eval自动注入的变量
 
 ## 验证检查点
 N+1. [ ] **[VERIFY] 启动独立验证subagent**
-     SOP: verify_sop.md plan_sop.md
+     SOP: deliverable_audit_sop.md plan_sop.md
      操作：读plan_sop.md第四章内容 → 准备verify_context.json → 启动验证subagent → 读取VERDICT → 按结果处理
      ⚠ 不可跳过，不可在未启动subagent的情况下标记[✓]
 
@@ -205,12 +205,12 @@ file_read(plan.md) 全文扫描，确认所有步骤（含[VERIFY]）均为 `[�
 按 subagent.md 标准流程启动验证subagent，input要点：
 
 - **角色**：你是独立验证者，工作是对抗性验证（证明交付物不能用）
-- **第一步强制**：file_read verify_sop.md 完整阅读验证SOP
-- **按 verify_sop.md 第3节**选择对应task_type的验证策略执行
+- **第一步强制**：file_read deliverable_audit_sop.md 完整阅读验证SOP
+- **按 deliverable_audit_sop.md 第3节**选择对应task_type的验证策略执行
 - **每个检查必须有工具调用证据**（实际执行，不是叙述）
 - **任务描述**：（填入原始任务描述）
 - **交付物清单**：（填入deliverables列表）
-- **输出**：在 result.md 中按 verify_sop.md 第6节格式输出，最后一行 `VERDICT: PASS / FAIL / PARTIAL`
+- **输出**：在 result.md 中按 deliverable_audit_sop.md 第6节格式输出，最后一行 `VERDICT: PASS / FAIL / PARTIAL`
 - **约束**：3轮内完成，每轮至少1个实际工具调用
 
 同时传入 verify_context.json 的路径，让subagent自行读取详细上下文。
